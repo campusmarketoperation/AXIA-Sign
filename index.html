@@ -1,0 +1,1140 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>AXIA Sign — 電子伝票システム</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+  :root {
+    --bg: #f7f6f3;
+    --surface: #ffffff;
+    --surface2: #f2f1ee;
+    --border: rgba(0,0,0,0.1);
+    --border2: rgba(0,0,0,0.18);
+    --text: #1a1917;
+    --text2: #6b6963;
+    --text3: #9e9b95;
+    --accent: #1a1917;
+    --green-bg: #eaf3de;
+    --green-text: #3b6d11;
+    --blue-bg: #e6f1fb;
+    --blue-text: #185fa5;
+    --red-bg: #fcebeb;
+    --red-text: #a32d2d;
+    --amber-bg: #faeeda;
+    --amber-text: #854f0b;
+    --radius: 10px;
+    --radius-lg: 14px;
+    --shadow: 0 1px 3px rgba(0,0,0,0.08), 0 0 0 0.5px rgba(0,0,0,0.08);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #1a1917;
+      --surface: #242320;
+      --surface2: #2e2c29;
+      --border: rgba(255,255,255,0.1);
+      --border2: rgba(255,255,255,0.18);
+      --text: #f0ede8;
+      --text2: #9e9b95;
+      --text3: #6b6963;
+      --accent: #f0ede8;
+      --green-bg: #173404;
+      --green-text: #97c459;
+      --blue-bg: #042c53;
+      --blue-text: #85b7eb;
+      --red-bg: #501313;
+      --red-text: #f09595;
+      --amber-bg: #412402;
+      --amber-text: #ef9f27;
+      --shadow: 0 1px 3px rgba(0,0,0,0.3), 0 0 0 0.5px rgba(255,255,255,0.06);
+    }
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; font-family: -apple-system, 'Hiragino Sans', 'Noto Sans JP', sans-serif; background: var(--bg); color: var(--text); font-size: 15px; }
+
+  /* ── AUTH SCREEN ── */
+  #auth-screen {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem 1.5rem;
+  }
+  .auth-card {
+    background: var(--surface);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow);
+    padding: 2rem;
+    width: 100%;
+    max-width: 380px;
+  }
+  .auth-logo { font-size: 22px; font-weight: 700; letter-spacing: -0.5px; margin-bottom: 6px; }
+  .auth-sub { font-size: 13px; color: var(--text2); margin-bottom: 2rem; }
+  .auth-tabs { display: flex; border-bottom: 0.5px solid var(--border); margin-bottom: 1.5rem; }
+  .auth-tab { flex: 1; padding: 8px; text-align: center; font-size: 13px; font-weight: 500; color: var(--text2); border: none; background: none; cursor: pointer; border-bottom: 2px solid transparent; transition: all 0.15s; }
+  .auth-tab.active { color: var(--text); border-bottom-color: var(--text); }
+
+  /* ── FORM ELEMENTS ── */
+  .field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px; }
+  label { font-size: 12px; font-weight: 500; color: var(--text2); }
+  input[type=text], input[type=email], input[type=password], input[type=date], input[type=number], select, textarea {
+    width: 100%;
+    padding: 10px 12px;
+    font-size: 15px;
+    font-family: inherit;
+    border: 0.5px solid var(--border2);
+    border-radius: var(--radius);
+    background: var(--surface);
+    color: var(--text);
+    outline: none;
+    transition: border-color 0.15s, box-shadow 0.15s;
+    -webkit-appearance: none;
+    appearance: none;
+  }
+  input:focus, select:focus, textarea:focus {
+    border-color: var(--text);
+    box-shadow: 0 0 0 3px rgba(0,0,0,0.06);
+  }
+  @media (prefers-color-scheme: dark) {
+    input:focus, select:focus, textarea:focus { box-shadow: 0 0 0 3px rgba(255,255,255,0.08); }
+  }
+  textarea { resize: none; }
+  select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236b6963' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 12px center; padding-right: 36px; }
+
+  .btn { display: flex; align-items: center; justify-content: center; gap: 8px; padding: 12px 20px; font-size: 14px; font-weight: 500; font-family: inherit; border-radius: var(--radius); cursor: pointer; transition: all 0.15s; border: none; text-decoration: none; }
+  .btn:active { transform: scale(0.98); }
+  .btn-primary { background: var(--accent); color: var(--bg); width: 100%; }
+  .btn-primary:hover { opacity: 0.88; }
+  .btn-ghost { background: none; color: var(--text); border: 0.5px solid var(--border2); }
+  .btn-ghost:hover { background: var(--surface2); }
+  .btn-danger { background: var(--red-bg); color: var(--red-text); border: none; }
+  .btn-sm { padding: 7px 14px; font-size: 13px; }
+
+  /* ── APP SHELL ── */
+  #app { display: none; min-height: 100vh; flex-direction: column; }
+  .topbar {
+    background: var(--surface);
+    border-bottom: 0.5px solid var(--border);
+    padding: 0 1rem;
+    height: 54px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .topbar-logo { font-size: 17px; font-weight: 700; letter-spacing: -0.3px; }
+  .topbar-right { display: flex; align-items: center; gap: 10px; }
+  .user-badge { font-size: 12px; color: var(--text2); }
+
+  .nav {
+    background: var(--surface);
+    border-top: 0.5px solid var(--border);
+    display: flex;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 100;
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  .nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 10px 4px 8px; cursor: pointer; font-size: 10px; font-weight: 500; color: var(--text3); border: none; background: none; transition: color 0.15s; }
+  .nav-item.active { color: var(--text); }
+  .nav-item svg { width: 22px; height: 22px; stroke-width: 1.8; }
+
+  .content { flex: 1; padding: 1.25rem 1rem 90px; max-width: 640px; margin: 0 auto; width: 100%; }
+
+  /* ── SCREENS ── */
+  .screen { display: none; }
+  .screen.active { display: block; }
+
+  .page-title { font-size: 20px; font-weight: 700; letter-spacing: -0.3px; margin-bottom: 1.25rem; }
+
+  .card { background: var(--surface); border-radius: var(--radius-lg); box-shadow: var(--shadow); padding: 1.25rem; margin-bottom: 1rem; }
+  .card-title { font-size: 13px; font-weight: 600; color: var(--text2); margin-bottom: 1rem; text-transform: none; letter-spacing: 0; }
+
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  @media (max-width: 400px) { .form-row { grid-template-columns: 1fr; } }
+
+  /* ── SIGN PAD ── */
+  .sign-pad-wrap { position: relative; border: 0.5px solid var(--border2); border-radius: var(--radius); overflow: hidden; background: var(--surface); }
+  #signPad { display: block; width: 100%; height: 180px; touch-action: none; cursor: crosshair; }
+  .sign-hint { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); font-size: 13px; color: var(--text3); pointer-events: none; transition: opacity 0.2s; }
+  .sign-hint.hidden { opacity: 0; }
+  .sign-actions { display: flex; justify-content: flex-end; margin-top: 6px; }
+  .clear-link { font-size: 12px; color: var(--text3); background: none; border: none; cursor: pointer; padding: 4px 8px; border-radius: 6px; }
+  .clear-link:hover { color: var(--text2); background: var(--surface2); }
+
+  /* ── RECORD LIST ── */
+  .record-item {
+    background: var(--surface);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow);
+    padding: 14px 16px;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .record-icon { width: 40px; height: 40px; border-radius: 10px; background: var(--surface2); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .record-icon svg { width: 20px; height: 20px; stroke: var(--text2); stroke-width: 1.8; }
+  .record-body { flex: 1; min-width: 0; }
+  .record-name { font-size: 14px; font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .record-meta { font-size: 12px; color: var(--text2); margin-top: 2px; }
+  .record-btns { display: flex; gap: 6px; flex-shrink: 0; }
+  .icon-btn { background: var(--surface2); border: none; border-radius: 8px; width: 34px; height: 34px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: background 0.15s; }
+  .icon-btn:hover { background: var(--border); }
+  .icon-btn svg { width: 16px; height: 16px; stroke: var(--text2); stroke-width: 2; }
+
+  .badge { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 500; padding: 2px 8px; border-radius: 20px; }
+  .badge-green { background: var(--green-bg); color: var(--green-text); }
+  .badge-gray { background: var(--surface2); color: var(--text2); }
+  .badge-blue { background: var(--blue-bg); color: var(--blue-text); }
+
+  /* ── STAT CARDS ── */
+  .stats { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 1.25rem; }
+  .stat { background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); padding: 14px 12px; }
+  .stat-val { font-size: 22px; font-weight: 700; letter-spacing: -0.5px; color: var(--text); }
+  .stat-label { font-size: 11px; color: var(--text2); margin-top: 2px; }
+
+  /* ── EMPTY STATE ── */
+  .empty { text-align: center; padding: 3.5rem 1rem; color: var(--text2); }
+  .empty svg { width: 40px; height: 40px; stroke: var(--text3); stroke-width: 1.5; margin: 0 auto 12px; display: block; }
+  .empty-title { font-size: 15px; font-weight: 600; margin-bottom: 6px; }
+  .empty-sub { font-size: 13px; }
+
+  /* ── MODAL ── */
+  .modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 200; display: none; align-items: flex-end; justify-content: center; padding: 0; }
+  .modal-backdrop.open { display: flex; }
+  .modal { background: var(--surface); border-radius: 20px 20px 0 0; width: 100%; max-width: 600px; padding: 1.5rem 1.25rem calc(1.5rem + env(safe-area-inset-bottom)); max-height: 85vh; overflow-y: auto; }
+  .modal-handle { width: 36px; height: 4px; background: var(--border); border-radius: 2px; margin: 0 auto 1.25rem; }
+  .modal-title { font-size: 17px; font-weight: 700; margin-bottom: 1.25rem; }
+  .modal-actions { display: flex; gap: 10px; margin-top: 1.25rem; }
+
+  /* ── TOAST ── */
+  .toast { position: fixed; bottom: 90px; left: 50%; transform: translateX(-50%) translateY(10px); background: var(--text); color: var(--bg); font-size: 13px; font-weight: 500; padding: 10px 20px; border-radius: 50px; opacity: 0; transition: all 0.25s; pointer-events: none; z-index: 300; white-space: nowrap; }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  /* ── SETTINGS ── */
+  .setting-row { display: flex; align-items: center; justify-content: space-between; padding: 14px 0; border-bottom: 0.5px solid var(--border); }
+  .setting-row:last-child { border-bottom: none; }
+  .setting-label { font-size: 14px; }
+  .setting-sub { font-size: 12px; color: var(--text2); margin-top: 2px; }
+
+  /* ── DIVIDER ── */
+  .divider { height: 0.5px; background: var(--border); margin: 1rem 0; }
+
+  /* ── SECTION HEADER ── */
+  .section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+  .section-title { font-size: 13px; font-weight: 600; color: var(--text2); }
+
+  /* ── FILTER BAR ── */
+  .filter-bar { display: flex; gap: 8px; margin-bottom: 14px; overflow-x: auto; padding-bottom: 2px; }
+  .filter-chip { flex-shrink: 0; padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: 500; cursor: pointer; border: 0.5px solid var(--border2); background: var(--surface); color: var(--text2); transition: all 0.15s; }
+  .filter-chip.active { background: var(--text); color: var(--bg); border-color: var(--text); }
+
+  .search-box { position: relative; margin-bottom: 12px; }
+  .search-box input { padding-left: 38px; background: var(--surface); }
+  .search-icon { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); }
+  .search-icon svg { width: 16px; height: 16px; stroke: var(--text3); stroke-width: 2; }
+</style>
+</head>
+<body>
+
+<!-- ════════════ AUTH SCREEN ════════════ -->
+<div id="auth-screen">
+  <div class="auth-card">
+    <div class="auth-logo">AXIA Sign</div>
+    <div class="auth-sub">電子伝票システム — フェーズ1</div>
+    <div class="auth-tabs">
+      <button class="auth-tab active" onclick="switchAuthTab('login')">ログイン</button>
+      <button class="auth-tab" onclick="switchAuthTab('signup')">新規登録</button>
+    </div>
+
+    <!-- LOGIN -->
+    <div id="login-form">
+      <div class="field">
+        <label>メールアドレス</label>
+        <input type="email" id="login-email" placeholder="your@company.com" autocomplete="email">
+      </div>
+      <div class="field">
+        <label>パスワード</label>
+        <input type="password" id="login-password" placeholder="••••••••" autocomplete="current-password">
+      </div>
+      <button class="btn btn-primary" onclick="doLogin()" style="margin-top:6px">ログイン</button>
+      <p style="text-align:center;font-size:12px;color:var(--text3);margin-top:14px">
+        ※ デモ用：メール・パスワードは何でもOK
+      </p>
+    </div>
+
+    <!-- SIGNUP -->
+    <div id="signup-form" style="display:none">
+      <div class="field">
+        <label>会社名</label>
+        <input type="text" id="signup-company" placeholder="株式会社〇〇">
+      </div>
+      <div class="field">
+        <label>お名前</label>
+        <input type="text" id="signup-name" placeholder="田中 太郎">
+      </div>
+      <div class="field">
+        <label>メールアドレス</label>
+        <input type="email" id="signup-email" placeholder="your@company.com">
+      </div>
+      <div class="field">
+        <label>パスワード</label>
+        <input type="password" id="signup-password" placeholder="8文字以上">
+      </div>
+      <button class="btn btn-primary" onclick="doSignup()" style="margin-top:6px">アカウント作成</button>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════ APP ════════════ -->
+<div id="app">
+  <div class="topbar">
+    <div class="topbar-logo">AXIA Sign</div>
+    <div class="topbar-right">
+      <span class="user-badge" id="user-label"></span>
+      <button class="btn btn-ghost btn-sm" onclick="doLogout()">ログアウト</button>
+    </div>
+  </div>
+
+  <div class="content">
+    <!-- ── ホーム ── -->
+    <div class="screen active" id="screen-home">
+      <div class="page-title" id="home-greeting">おはようございます</div>
+      <div class="stats">
+        <div class="stat">
+          <div class="stat-val" id="stat-total">0</div>
+          <div class="stat-label">総伝票数</div>
+        </div>
+        <div class="stat">
+          <div class="stat-val" id="stat-today">0</div>
+          <div class="stat-label">今日</div>
+        </div>
+        <div class="stat">
+          <div class="stat-val" id="stat-signed">0</div>
+          <div class="stat-label">サイン済み</div>
+        </div>
+      </div>
+
+      <div class="section-header">
+        <span class="section-title">最近の伝票</span>
+        <button class="btn btn-ghost btn-sm" onclick="switchScreen('list')">すべて見る</button>
+      </div>
+      <div id="home-recent"></div>
+
+      <button class="btn btn-primary" style="margin-top:1rem" onclick="switchScreen('new')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        新しい伝票を作成
+      </button>
+    </div>
+
+    <!-- ── 新規作成 ── -->
+    <div class="screen" id="screen-new">
+      <div class="page-title">新規伝票作成</div>
+
+      <div class="card">
+        <div class="card-title">案件情報</div>
+        <div class="field">
+          <label>案件名 *</label>
+          <input type="text" id="f-project" placeholder="例：設備点検・定期清掃">
+        </div>
+        <div class="form-row">
+          <div class="field">
+            <label>現場名 *</label>
+            <input type="text" id="f-site" placeholder="例：〇〇ビル3F">
+          </div>
+          <div class="field">
+            <label>スタッフ名 *</label>
+            <select id="f-staff-select" onchange="onStaffSelectChange()"></select>
+            <input type="text" id="f-staff-new" placeholder="スタッフ名を入力" style="display:none;margin-top:8px">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="field">
+            <label>稼働日 *</label>
+            <input type="date" id="f-date">
+          </div>
+          <div class="field">
+            <label>稼働時間（h）*</label>
+            <input type="number" id="f-hours" placeholder="8" min="0" max="24" step="0.5">
+          </div>
+        </div>
+        <div class="field">
+          <label>備考</label>
+          <textarea id="f-note" rows="2" placeholder="特記事項があれば..."></textarea>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">お客様サイン</div>
+        <div class="sign-pad-wrap">
+          <canvas id="signPad"></canvas>
+          <div class="sign-hint" id="signHint">ここにサインしてください</div>
+        </div>
+        <div class="sign-actions">
+          <button class="clear-link" onclick="clearSign()">サインをクリア</button>
+        </div>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <button class="btn btn-primary" onclick="saveDenpo()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="17" height="17"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+          保存してPDF生成
+        </button>
+        <button class="btn btn-ghost" onclick="previewPDF()">プレビューのみ</button>
+      </div>
+    </div>
+
+    <!-- ── 伝票一覧 ── -->
+    <div class="screen" id="screen-list">
+      <div class="page-title">伝票一覧</div>
+
+      <div class="search-box">
+        <div class="search-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        </div>
+        <input type="text" id="search-input" placeholder="案件名・現場名・スタッフ名で検索..." oninput="renderList()">
+      </div>
+
+      <div class="filter-bar">
+        <div class="filter-chip active" data-filter="all" onclick="setFilter('all',this)">すべて</div>
+        <div class="filter-chip" data-filter="signed" onclick="setFilter('signed',this)">サイン済み</div>
+        <div class="filter-chip" data-filter="today" onclick="setFilter('today',this)">今日</div>
+        <div class="filter-chip" data-filter="week" onclick="setFilter('week',this)">今週</div>
+      </div>
+
+      <div id="list-container"></div>
+    </div>
+
+    <!-- ── 設定 ── -->
+    <div class="screen" id="screen-settings">
+      <div class="page-title">設定</div>
+
+      <div class="card">
+        <div class="card-title">会社情報</div>
+        <div class="field">
+          <label>会社名</label>
+          <input type="text" id="s-company" placeholder="株式会社〇〇">
+        </div>
+        <div class="field">
+          <label>メール送信者名</label>
+          <input type="text" id="s-sender" placeholder="でんぴょうシステム">
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="saveSettings()" style="margin-top:4px">設定を保存</button>
+      </div>
+
+      <div class="card">
+        <div class="card-title">スタッフ管理</div>
+        <div style="display:flex;gap:8px;margin-bottom:12px">
+          <input type="text" id="s-staff-input" placeholder="スタッフ名を追加" style="flex:1">
+          <button class="btn btn-ghost btn-sm" onclick="addStaff()" style="flex-shrink:0;white-space:nowrap">追加</button>
+        </div>
+        <div id="staff-list-settings"></div>
+        <p style="font-size:12px;color:var(--text3);margin-top:10px">登録したスタッフは伝票作成のプルダウンに表示されます</p>
+      </div>
+
+      <div class="card">
+        <div class="card-title">PDF設定</div>
+        <div class="setting-row">
+          <div>
+            <div class="setting-label">会社ロゴ</div>
+            <div class="setting-sub">PDFヘッダーに表示（近日対応）</div>
+          </div>
+          <span class="badge badge-gray">準備中</span>
+        </div>
+        <div class="setting-row">
+          <div>
+            <div class="setting-label">印刷レイアウト</div>
+            <div class="setting-sub">A4 / レシートプリンター</div>
+          </div>
+          <select style="width:auto;padding:6px 32px 6px 10px;font-size:13px">
+            <option>A4</option>
+            <option disabled>レシート（準備中）</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">メール連携</div>
+        <div class="setting-row">
+          <div>
+            <div class="setting-label">Resend API連携</div>
+            <div class="setting-sub">お客様へのPDFメール送信</div>
+          </div>
+          <span class="badge badge-blue">フェーズ2</span>
+        </div>
+        <div class="setting-row">
+          <div>
+            <div class="setting-label">SendGrid連携</div>
+            <div class="setting-sub">大量送信・テンプレート管理</div>
+          </div>
+          <span class="badge badge-blue">フェーズ2</span>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">データ</div>
+        <div class="setting-row">
+          <div>
+            <div class="setting-label">伝票データをエクスポート</div>
+            <div class="setting-sub">JSON形式でダウンロード</div>
+          </div>
+          <button class="btn btn-ghost btn-sm" onclick="exportData()">書き出し</button>
+        </div>
+        <div class="setting-row">
+          <div>
+            <div class="setting-label">全データ削除</div>
+            <div class="setting-sub">この操作は取り消せません</div>
+          </div>
+          <button class="btn btn-danger btn-sm" onclick="clearAllData()">削除</button>
+        </div>
+      </div>
+    </div>
+  </div><!-- /content -->
+
+  <!-- ── BOTTOM NAV ── -->
+  <nav class="nav">
+    <button class="nav-item active" id="nav-home" onclick="switchScreen('home')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+      ホーム
+    </button>
+    <button class="nav-item" id="nav-new" onclick="switchScreen('new')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+      新規作成
+    </button>
+    <button class="nav-item" id="nav-list" onclick="switchScreen('list')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+      伝票一覧
+    </button>
+    <button class="nav-item" id="nav-settings" onclick="switchScreen('settings')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+      設定
+    </button>
+  </nav>
+</div><!-- /app -->
+
+<!-- ── EMAIL MODAL ── -->
+<div class="modal-backdrop" id="email-modal">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">PDFをメールで送信</div>
+    <div class="field">
+      <label>お客様のメールアドレス</label>
+      <input type="email" id="email-to" placeholder="customer@example.com">
+    </div>
+    <div class="field">
+      <label>件名</label>
+      <input type="text" id="email-subject" placeholder="作業完了のご報告">
+    </div>
+    <div class="field">
+      <label>本文</label>
+      <textarea id="email-body" rows="4" placeholder="お世話になっております。&#10;作業が完了しましたのでPDFをお送りします。"></textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" style="flex:1" onclick="closeModal('email-modal')">キャンセル</button>
+      <button class="btn btn-primary" style="flex:2" onclick="sendEmail()">送信（デモ）</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── DETAIL MODAL ── -->
+<div class="modal-backdrop" id="detail-modal">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title" id="detail-title"></div>
+    <div id="detail-body"></div>
+    <div class="modal-actions" id="detail-actions"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ════════════ STATE ════════════
+let currentUser = null;
+let currentFilter = 'all';
+let signHasDraw = false;
+let currentDetailId = null;
+
+// ════════════ STORAGE ════════════
+function getRecords() {
+  try { return JSON.parse(localStorage.getItem('denpo_v1_records') || '[]'); } catch { return []; }
+}
+function saveRecords(r) { localStorage.setItem('denpo_v1_records', JSON.stringify(r)); }
+function getSettings() {
+  try { return JSON.parse(localStorage.getItem('denpo_v1_settings') || '{}'); } catch { return {}; }
+}
+function saveSettingsData(s) { localStorage.setItem('denpo_v1_settings', JSON.stringify(s)); }
+
+// ════════════ AUTH ════════════
+function switchAuthTab(tab) {
+  document.querySelectorAll('.auth-tab').forEach((t,i) => t.classList.toggle('active', ['login','signup'][i] === tab));
+  document.getElementById('login-form').style.display = tab === 'login' ? '' : 'none';
+  document.getElementById('signup-form').style.display = tab === 'signup' ? '' : 'none';
+}
+
+function doLogin() {
+  const email = document.getElementById('login-email').value.trim();
+  const pass = document.getElementById('login-password').value;
+  if (!email || !pass) { showToast('メールとパスワードを入力してください'); return; }
+  currentUser = { email, name: email.split('@')[0] };
+  localStorage.setItem('denpo_v1_user', JSON.stringify(currentUser));
+  enterApp();
+}
+
+function doSignup() {
+  const company = document.getElementById('signup-company').value.trim();
+  const name = document.getElementById('signup-name').value.trim();
+  const email = document.getElementById('signup-email').value.trim();
+  const pass = document.getElementById('signup-password').value;
+  if (!company || !name || !email || !pass) { showToast('すべての項目を入力してください'); return; }
+  currentUser = { email, name, company };
+  localStorage.setItem('denpo_v1_user', JSON.stringify(currentUser));
+  const s = getSettings();
+  s.company = company;
+  s.defaultStaff = name;
+  saveSettingsData(s);
+  enterApp();
+}
+
+function doLogout() {
+  localStorage.removeItem('denpo_v1_user');
+  currentUser = null;
+  document.getElementById('auth-screen').style.display = 'flex';
+  document.getElementById('app').style.display = 'none';
+}
+
+function enterApp() {
+  document.getElementById('auth-screen').style.display = 'none';
+  document.getElementById('app').style.display = 'flex';
+  document.getElementById('user-label').textContent = currentUser.name;
+  initSignPad();
+  setDefaults();
+  loadSettings();
+  updateHome();
+  setGreeting();
+}
+
+function setGreeting() {
+  const h = new Date().getHours();
+  const g = h < 12 ? 'おはようございます' : h < 18 ? 'こんにちは' : 'お疲れ様です';
+  document.getElementById('home-greeting').textContent = g + '、' + (currentUser.name || '') + 'さん';
+}
+
+// ════════════ SIGN PAD ════════════
+let signCtx, signCanvas, drawing = false, lastX = 0, lastY = 0;
+
+function initSignPad() {
+  signCanvas = document.getElementById('signPad');
+  signCtx = signCanvas.getContext('2d');
+  resizeSignPad();
+  window.addEventListener('resize', resizeSignPad);
+
+  function pos(e) {
+    const r = signCanvas.getBoundingClientRect();
+    const src = e.touches ? e.touches[0] : e;
+    return { x: (src.clientX - r.left) * (signCanvas.width / r.width), y: (src.clientY - r.top) * (signCanvas.height / r.height) };
+  }
+
+  signCanvas.addEventListener('mousedown', e => { drawing = true; const p = pos(e); lastX = p.x; lastY = p.y; });
+  signCanvas.addEventListener('mousemove', e => {
+    if (!drawing) return;
+    const p = pos(e);
+    signCtx.beginPath(); signCtx.moveTo(lastX, lastY); signCtx.lineTo(p.x, p.y); signCtx.stroke();
+    lastX = p.x; lastY = p.y;
+    markSigned();
+  });
+  signCanvas.addEventListener('mouseup', () => drawing = false);
+  signCanvas.addEventListener('mouseleave', () => drawing = false);
+
+  signCanvas.addEventListener('touchstart', e => { e.preventDefault(); drawing = true; const p = pos(e); lastX = p.x; lastY = p.y; }, { passive: false });
+  signCanvas.addEventListener('touchmove', e => {
+    e.preventDefault();
+    if (!drawing) return;
+    const p = pos(e);
+    signCtx.beginPath(); signCtx.moveTo(lastX, lastY); signCtx.lineTo(p.x, p.y); signCtx.stroke();
+    lastX = p.x; lastY = p.y;
+    markSigned();
+  }, { passive: false });
+  signCanvas.addEventListener('touchend', () => drawing = false);
+}
+
+function resizeSignPad() {
+  if (!signCanvas) return;
+  const dpr = window.devicePixelRatio || 1;
+  const rect = signCanvas.getBoundingClientRect();
+  signCanvas.width = rect.width * dpr;
+  signCanvas.height = 180 * dpr;
+  signCtx.scale(dpr, dpr);
+  signCtx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--text').trim() || '#1a1917';
+  signCtx.lineWidth = 2.5;
+  signCtx.lineCap = 'round';
+  signCtx.lineJoin = 'round';
+  signHasDraw = false;
+}
+
+function markSigned() {
+  signHasDraw = true;
+  document.getElementById('signHint').classList.add('hidden');
+}
+
+function clearSign() {
+  resizeSignPad();
+  document.getElementById('signHint').classList.remove('hidden');
+}
+
+// ════════════ STAFF MANAGEMENT ════════════
+function getStaffList() {
+  try { return JSON.parse(localStorage.getItem('denpo_v1_staff') || '[]'); } catch { return []; }
+}
+function saveStaffList(list) { localStorage.setItem('denpo_v1_staff', JSON.stringify(list)); }
+
+function addStaff() {
+  const input = document.getElementById('s-staff-input');
+  const name = input.value.trim();
+  if (!name) { showToast('スタッフ名を入力してください'); return; }
+  const list = getStaffList();
+  if (list.includes(name)) { showToast('すでに登録されています'); return; }
+  list.push(name);
+  saveStaffList(list);
+  input.value = '';
+  renderStaffSettings();
+  refreshStaffSelect();
+  showToast(name + ' を登録しました');
+}
+
+function deleteStaff(name) {
+  const list = getStaffList().filter(s => s !== name);
+  saveStaffList(list);
+  renderStaffSettings();
+  refreshStaffSelect();
+  showToast(name + ' を削除しました');
+}
+
+function renderStaffSettings() {
+  const list = getStaffList();
+  const el = document.getElementById('staff-list-settings');
+  if (!list.length) {
+    el.innerHTML = '<p style="font-size:13px;color:var(--text3);padding:4px 0">まだスタッフが登録されていません</p>';
+    return;
+  }
+  el.innerHTML = list.map(name => `
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:9px 0;border-bottom:0.5px solid var(--border)">
+      <span style="font-size:14px">${name}</span>
+      <button class="icon-btn" onclick="deleteStaff('${name.replace(/'/g,"\\'")}')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>
+      </button>
+    </div>`).join('');
+}
+
+function refreshStaffSelect() {
+  const list = getStaffList();
+  const sel = document.getElementById('f-staff-select');
+  if (!sel) return;
+  const prev = sel.value;
+  sel.innerHTML = '';
+  const newOpt = document.createElement('option');
+  newOpt.value = '__new__';
+  newOpt.textContent = '＋ 新規スタッフ（手入力）';
+  sel.appendChild(newOpt);
+  list.forEach(name => {
+    const opt = document.createElement('option');
+    opt.value = name;
+    opt.textContent = name;
+    sel.appendChild(opt);
+  });
+  if (prev && prev !== '__new__' && list.includes(prev)) sel.value = prev;
+  else if (list.length > 0) sel.value = list[0];
+  else sel.value = '__new__';
+  onStaffSelectChange();
+}
+
+function onStaffSelectChange() {
+  const sel = document.getElementById('f-staff-select');
+  const newInput = document.getElementById('f-staff-new');
+  if (sel.value === '__new__') {
+    newInput.style.display = '';
+    newInput.focus();
+  } else {
+    newInput.style.display = 'none';
+    newInput.value = '';
+  }
+}
+
+function getSelectedStaff() {
+  const sel = document.getElementById('f-staff-select');
+  if (sel.value === '__new__') {
+    return document.getElementById('f-staff-new').value.trim();
+  }
+  return sel.value;
+}
+
+// ════════════ FORM DEFAULTS ════════════
+function setDefaults() {
+  document.getElementById('f-date').value = new Date().toISOString().split('T')[0];
+  refreshStaffSelect();
+}
+
+function loadSettings() {
+  const s = getSettings();
+  if (s.company) document.getElementById('s-company').value = s.company;
+  if (s.sender) document.getElementById('s-sender').value = s.sender;
+  renderStaffSettings();
+}
+
+function saveSettings() {
+  const s = {
+    company: document.getElementById('s-company').value.trim(),
+    sender: document.getElementById('s-sender').value.trim()
+  };
+  saveSettingsData(s);
+  showToast('設定を保存しました');
+}
+
+// ════════════ SCREEN ROUTING ════════════
+function switchScreen(name) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('screen-' + name).classList.add('active');
+  document.getElementById('nav-' + name).classList.add('active');
+  if (name === 'home') updateHome();
+  if (name === 'list') renderList();
+  if (name === 'new') { setDefaults(); }
+  window.scrollTo(0, 0);
+}
+
+// ════════════ HOME ════════════
+function updateHome() {
+  const records = getRecords();
+  const today = new Date().toISOString().split('T')[0];
+  document.getElementById('stat-total').textContent = records.length;
+  document.getElementById('stat-today').textContent = records.filter(r => r.date === today).length;
+  document.getElementById('stat-signed').textContent = records.filter(r => r.hasSig).length;
+
+  const container = document.getElementById('home-recent');
+  const recent = records.slice(0, 3);
+  if (!recent.length) {
+    container.innerHTML = '<div class="empty" style="padding:2rem 1rem"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg><div class="empty-title">伝票がまだありません</div><div class="empty-sub">「新規作成」から始めましょう</div></div>';
+  } else {
+    container.innerHTML = recent.map(r => recordHTML(r)).join('');
+  }
+}
+
+// ════════════ SAVE / PDF ════════════
+function getFormData() {
+  return {
+    project: document.getElementById('f-project').value.trim(),
+    site: document.getElementById('f-site').value.trim(),
+    staff: getSelectedStaff(),
+    date: document.getElementById('f-date').value,
+    hours: document.getElementById('f-hours').value,
+    note: document.getElementById('f-note').value.trim()
+  };
+}
+
+function validate(d) {
+  if (!d.project) { showToast('案件名を入力してください'); return false; }
+  if (!d.site) { showToast('現場名を入力してください'); return false; }
+  if (!d.staff) { showToast('スタッフ名を入力してください'); return false; }
+  if (!d.date) { showToast('稼働日を入力してください'); return false; }
+  if (!d.hours) { showToast('稼働時間を入力してください'); return false; }
+  return true;
+}
+
+function saveDenpo() {
+  const d = getFormData();
+  if (!validate(d)) return;
+  const sigData = signHasDraw ? signCanvas.toDataURL('image/png') : null;
+  const record = { id: Date.now(), ...d, sigData, hasSig: !!sigData, createdAt: new Date().toISOString() };
+  const records = getRecords();
+  records.unshift(record);
+  saveRecords(records);
+  generatePDF(record, true);
+  showToast('保存しました。PDFをダウンロード中...');
+  // reset form
+  ['f-project','f-note'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('f-hours').value = '';
+  clearSign();
+  updateHome();
+}
+
+function previewPDF() {
+  const d = getFormData();
+  if (!validate(d)) return;
+  const sigData = signHasDraw ? signCanvas.toDataURL('image/png') : null;
+  const uri = generatePDF({ ...d, hasSig: !!sigData, sigData, createdAt: new Date().toISOString() }, false);
+  window.open(uri, '_blank');
+}
+
+function generatePDF(r, download) {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ unit: 'mm', format: 'a4' });
+  const W = 210, M = 20;
+
+  // Header bar
+  doc.setFillColor(26, 25, 23);
+  doc.rect(0, 0, W, 32, 'F');
+  doc.setTextColor(255,255,255);
+  doc.setFontSize(18); doc.setFont('helvetica','bold');
+  doc.text('作業完了伝票', M, 19);
+  doc.setFontSize(9); doc.setFont('helvetica','normal');
+  doc.text('AXIA Sign — SERVICE COMPLETION SLIP', W - M, 19, { align: 'right' });
+
+  // Meta
+  doc.setTextColor(120,118,110);
+  doc.setFontSize(8);
+  doc.text('発行日時：' + new Date(r.createdAt || Date.now()).toLocaleString('ja-JP'), M, 40);
+  if (r.id) doc.text('伝票番号：' + r.id, W - M, 40, { align: 'right' });
+
+  // Fields
+  const fields = [
+    ['案件名', r.project || r.projectName || ''],
+    ['現場名', r.site || r.siteName || ''],
+    ['スタッフ名', r.staff || r.staffName || ''],
+    ['稼働日', r.date || r.workDate || ''],
+    ['稼働時間', (r.hours || r.workHours || '') + ' 時間'],
+  ];
+  if (r.note) fields.push(['備考', r.note]);
+
+  let y = 50;
+  fields.forEach(([label, val], i) => {
+    const bg = i % 2 === 0 ? [250,249,246] : [244,243,240];
+    doc.setFillColor(...bg);
+    doc.rect(M, y - 4, W - M * 2, 12, 'F');
+    doc.setTextColor(120,118,110); doc.setFontSize(8); doc.setFont('helvetica','normal');
+    doc.text(label, M + 3, y + 2);
+    doc.setTextColor(26,25,23); doc.setFontSize(11); doc.setFont('helvetica','bold');
+    doc.text(val || '—', M + 52, y + 2);
+    y += 14;
+  });
+
+  // Signature box
+  y += 4;
+  doc.setTextColor(120,118,110); doc.setFontSize(9); doc.setFont('helvetica','normal');
+  doc.text('お客様サイン', M, y);
+  y += 4;
+
+  const sigH = 45;
+  doc.setDrawColor(200,198,190); doc.setLineWidth(0.3);
+  doc.rect(M, y, W - M * 2, sigH);
+
+  if (r.sigData) {
+    try { doc.addImage(r.sigData, 'PNG', M + 2, y + 2, W - M * 2 - 4, sigH - 4); } catch(e){}
+  } else {
+    doc.setTextColor(180,178,170); doc.setFontSize(10);
+    doc.text('サインなし', W / 2, y + sigH / 2, { align: 'center', baseline: 'middle' });
+  }
+  y += sigH + 6;
+
+  // Footer
+  doc.setDrawColor(220,218,210); doc.setLineWidth(0.3);
+  doc.line(M, y, W - M, y);
+  y += 5;
+  doc.setTextColor(160,158,150); doc.setFontSize(7.5);
+  const s = getSettings();
+  doc.text(s.company || 'でんぴょうシステム', M, y);
+  doc.text('本書は電子伝票システムにより発行されました', W - M, y, { align: 'right' });
+
+  if (download) {
+    doc.save('denpo_' + (r.project||r.projectName||'untitled') + '_' + (r.date||r.workDate||'') + '.pdf');
+    return null;
+  }
+  return doc.output('datauristring');
+}
+
+// ════════════ LIST ════════════
+function setFilter(f, el) {
+  currentFilter = f;
+  document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+  renderList();
+}
+
+function renderList() {
+  const query = (document.getElementById('search-input')?.value || '').toLowerCase();
+  const today = new Date().toISOString().split('T')[0];
+  const weekAgo = new Date(Date.now() - 7 * 86400000).toISOString().split('T')[0];
+  let records = getRecords();
+
+  if (query) {
+    records = records.filter(r =>
+      (r.project||r.projectName||'').toLowerCase().includes(query) ||
+      (r.site||r.siteName||'').toLowerCase().includes(query) ||
+      (r.staff||r.staffName||'').toLowerCase().includes(query)
+    );
+  }
+  if (currentFilter === 'signed') records = records.filter(r => r.hasSig);
+  if (currentFilter === 'today') records = records.filter(r => (r.date||r.workDate) === today);
+  if (currentFilter === 'week') records = records.filter(r => (r.date||r.workDate) >= weekAgo);
+
+  const container = document.getElementById('list-container');
+  if (!records.length) {
+    container.innerHTML = '<div class="empty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg><div class="empty-title">伝票が見つかりません</div><div class="empty-sub">条件を変えて検索してみてください</div></div>';
+  } else {
+    container.innerHTML = records.map(r => recordHTML(r)).join('');
+  }
+}
+
+function recordHTML(r) {
+  const name = r.project || r.projectName || '（無題）';
+  const site = r.site || r.siteName || '';
+  const staff = r.staff || r.staffName || '';
+  const date = r.date || r.workDate || '';
+  const hours = r.hours || r.workHours || '';
+  const badge = r.hasSig
+    ? '<span class="badge badge-green">サイン済み</span>'
+    : '<span class="badge badge-gray">サインなし</span>';
+  return `
+    <div class="record-item">
+      <div class="record-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+      </div>
+      <div class="record-body" onclick="openDetail(${r.id})" style="cursor:pointer">
+        <div class="record-name">${name}</div>
+        <div class="record-meta">${site} ／ ${staff} ／ ${date} ／ ${hours}h</div>
+        <div style="margin-top:4px">${badge}</div>
+      </div>
+      <div class="record-btns">
+        <button class="icon-btn" onclick="downloadRecord(${r.id})" title="PDF">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        </button>
+        <button class="icon-btn" onclick="openEmailModal(${r.id})" title="メール">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+        </button>
+        <button class="icon-btn" onclick="deleteRecord(${r.id})" title="削除">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+        </button>
+      </div>
+    </div>`;
+}
+
+function downloadRecord(id) {
+  const r = getRecords().find(x => x.id === id);
+  if (r) { generatePDF(r, true); showToast('PDFをダウンロードしています...'); }
+}
+
+function deleteRecord(id) {
+  if (!confirm('この伝票を削除しますか？')) return;
+  saveRecords(getRecords().filter(r => r.id !== id));
+  renderList();
+  updateHome();
+  showToast('削除しました');
+}
+
+// ════════════ DETAIL MODAL ════════════
+function openDetail(id) {
+  currentDetailId = id;
+  const r = getRecords().find(x => x.id === id);
+  if (!r) return;
+  const name = r.project || r.projectName || '（無題）';
+  document.getElementById('detail-title').textContent = name;
+
+  const rows = [
+    ['現場名', r.site || r.siteName],
+    ['スタッフ', r.staff || r.staffName],
+    ['稼働日', r.date || r.workDate],
+    ['稼働時間', (r.hours || r.workHours) + ' 時間'],
+    ['備考', r.note || '—'],
+    ['サイン', r.hasSig ? 'あり' : 'なし'],
+    ['作成日時', new Date(r.createdAt).toLocaleString('ja-JP')],
+  ];
+
+  document.getElementById('detail-body').innerHTML = `
+    <div style="border:0.5px solid var(--border);border-radius:var(--radius);overflow:hidden;margin-bottom:1rem">
+      ${rows.map(([l,v],i) => `
+        <div style="display:flex;padding:10px 14px;background:${i%2===0?'var(--surface2)':'var(--surface)'}">
+          <span style="font-size:12px;color:var(--text2);width:80px;flex-shrink:0">${l}</span>
+          <span style="font-size:13px;font-weight:500">${v || '—'}</span>
+        </div>`).join('')}
+    </div>
+    ${r.sigData ? `<div style="border:0.5px solid var(--border);border-radius:var(--radius);padding:8px;margin-bottom:1rem"><img src="${r.sigData}" style="width:100%;height:80px;object-fit:contain"></div>` : ''}
+  `;
+
+  document.getElementById('detail-actions').innerHTML = `
+    <button class="btn btn-ghost" style="flex:1" onclick="closeModal('detail-modal')">閉じる</button>
+    <button class="btn btn-ghost" style="flex:1" onclick="openEmailModal(${id});closeModal('detail-modal')">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+      メール
+    </button>
+    <button class="btn btn-primary" style="flex:1" onclick="downloadRecord(${id});closeModal('detail-modal')">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      PDF
+    </button>
+  `;
+  document.getElementById('detail-modal').classList.add('open');
+}
+
+// ════════════ EMAIL MODAL ════════════
+function openEmailModal(id) {
+  currentDetailId = id;
+  const r = getRecords().find(x => x.id === id);
+  if (!r) return;
+  const name = r.project || r.projectName || '';
+  const date = r.date || r.workDate || '';
+  document.getElementById('email-subject').value = `作業完了のご報告：${name}（${date}）`;
+  document.getElementById('email-body').value = `お世話になっております。\n${name}の作業が完了しましたので、完了伝票PDFをお送りします。\nご確認のほど、よろしくお願いいたします。`;
+  document.getElementById('email-modal').classList.add('open');
+}
+
+function sendEmail() {
+  const to = document.getElementById('email-to').value.trim();
+  if (!to) { showToast('送信先メールアドレスを入力してください'); return; }
+  // デモ：実際はResend/SendGrid APIを叩く
+  closeModal('email-modal');
+  showToast('送信しました（デモモード）');
+  document.getElementById('email-to').value = '';
+}
+
+function closeModal(id) {
+  document.getElementById(id).classList.remove('open');
+}
+
+// Close modal on backdrop click
+document.querySelectorAll('.modal-backdrop').forEach(b => {
+  b.addEventListener('click', e => { if (e.target === b) b.classList.remove('open'); });
+});
+
+// ════════════ DATA UTILS ════════════
+function exportData() {
+  const data = { records: getRecords(), settings: getSettings(), exportedAt: new Date().toISOString() };
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'denpo_export_' + new Date().toISOString().split('T')[0] + '.json';
+  a.click();
+  showToast('エクスポートしました');
+}
+
+function clearAllData() {
+  if (!confirm('すべてのデータを削除しますか？\nこの操作は取り消せません。')) return;
+  localStorage.removeItem('denpo_v1_records');
+  updateHome();
+  renderList();
+  showToast('データを削除しました');
+}
+
+// ════════════ TOAST ════════════
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2800);
+}
+
+// ════════════ BOOT ════════════
+const savedUser = localStorage.getItem('denpo_v1_user');
+if (savedUser) {
+  try {
+    currentUser = JSON.parse(savedUser);
+    enterApp();
+  } catch { }
+}
+</script>
+</body>
+</html>
