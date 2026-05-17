@@ -371,24 +371,24 @@
         </div>
       </div>
 
-      <div class="card">
-        <div class="card-title">お客様サイン</div>
-        <div class="sign-pad-wrap">
-          <canvas id="signPad"></canvas>
-          <div class="sign-hint" id="signHint">ここにサインしてください</div>
-        </div>
-        <div class="sign-actions">
-          <button class="clear-link" onclick="clearSign()">サインをクリア</button>
-        </div>
+      <div style="background:var(--amber-bg);border-radius:var(--radius);padding:12px 14px;margin-bottom:1rem;display:flex;gap:10px;align-items:flex-start">
+        <svg viewBox="0 0 24 24" fill="none" stroke="var(--amber-text)" stroke-width="2" width="18" height="18" style="flex-shrink:0;margin-top:1px"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        <span style="font-size:13px;color:var(--amber-text);line-height:1.5">入力完了後、「サイン待ちに追加」で保存します。お客様のサインは次の画面で行います。</span>
       </div>
 
       <div style="display:flex;flex-direction:column;gap:10px">
-        <button class="btn btn-primary" onclick="saveDenpo()">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="17" height="17"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
-          保存してPDF生成
+        <button class="btn btn-primary" onclick="sendToSignQueue()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="17" height="17"><path d="M12 22C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10-4.477 10-10 10z"/><path d="M9 12l2 2 4-4"/></svg>
+          サイン待ちに追加
         </button>
-        <button class="btn btn-ghost" onclick="previewPDF()">プレビューのみ</button>
+        <button class="btn btn-ghost" onclick="previewDraft()">内容をプレビュー</button>
       </div>
+    </div>
+
+    <!-- ── サイン待ち ── -->
+    <div class="screen" id="screen-queue">
+      <div class="page-title">サイン待ち</div>
+      <div id="queue-container"></div>
     </div>
 
     <!-- ── 伝票一覧 ── -->
@@ -455,7 +455,7 @@
           </div>
           <select style="width:auto;padding:6px 32px 6px 10px;font-size:13px">
             <option>A4</option>
-            <option disabled>レシート（準備中）</option>
+            <option disabled>レシート（近日対応）</option>
           </select>
         </div>
       </div>
@@ -467,14 +467,14 @@
             <div class="setting-label">Resend API連携</div>
             <div class="setting-sub">お客様へのPDFメール送信</div>
           </div>
-          <span class="badge badge-blue">フェーズ2</span>
+          <span class="badge badge-blue">近日対応</span>
         </div>
         <div class="setting-row">
           <div>
             <div class="setting-label">SendGrid連携</div>
             <div class="setting-sub">大量送信・テンプレート管理</div>
           </div>
-          <span class="badge badge-blue">フェーズ2</span>
+          <span class="badge badge-blue">近日対応</span>
         </div>
       </div>
 
@@ -507,6 +507,11 @@
     <button class="nav-item" id="nav-new" onclick="switchScreen('new')">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
       新規作成
+    </button>
+    <button class="nav-item" id="nav-queue" onclick="switchScreen('queue')" style="position:relative">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 22C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10-4.477 10-10 10z"/><path d="M8 12h4"/><path d="M12 8v4"/></svg>
+      <span id="queue-badge" style="display:none;position:absolute;top:6px;right:12px;background:#E24B4A;color:#fff;font-size:9px;font-weight:700;min-width:16px;height:16px;border-radius:8px;display:flex;align-items:center;justify-content:center;padding:0 4px"></span>
+      サイン待ち
     </button>
     <button class="nav-item" id="nav-list" onclick="switchScreen('list')">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
@@ -555,18 +560,617 @@
 
 <div class="toast" id="toast"></div>
 
+<!-- ════════════ FULLSCREEN SIGN FLOW ════════════ -->
+<div id="sign-overlay" style="display:none;position:fixed;inset:0;z-index:500;background:var(--bg);flex-direction:column;">
+
+  <!-- Step 1: 内容確認 -->
+  <div id="sign-step-confirm" style="display:flex;flex-direction:column;height:100%;">
+    <div style="background:var(--surface);border-bottom:0.5px solid var(--border);padding:0 1rem;height:54px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;">
+      <button onclick="closeSignOverlay()" style="background:none;border:none;cursor:pointer;display:flex;align-items:center;gap:6px;font-size:14px;color:var(--text2);">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+        戻る
+      </button>
+      <span style="font-size:15px;font-weight:600;">作業内容の確認</span>
+      <span style="width:60px"></span>
+    </div>
+    <div style="flex:1;overflow-y:auto;padding:1.25rem 1rem;">
+      <div style="background:var(--amber-bg);border-radius:var(--radius);padding:12px 14px;margin-bottom:1.25rem;display:flex;gap:10px;align-items:flex-start;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="var(--amber-text)" stroke-width="2" width="18" height="18" style="flex-shrink:0;margin-top:1px"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        <span style="font-size:13px;color:var(--amber-text);line-height:1.5">以下の作業内容をお客様にご確認いただき、問題がなければ「サインへ進む」をタップしてください。</span>
+      </div>
+      <div id="confirm-body" style="background:var(--surface);border-radius:var(--radius-lg);box-shadow:var(--shadow);overflow:hidden;margin-bottom:1.25rem;"></div>
+      <button class="btn btn-primary" onclick="goToSignStep()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="17" height="17"><path d="M12 22C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10-4.477 10-10 10z"/><path d="M9 12l2 2 4-4"/></svg>
+        内容を確認しました。サインへ進む
+      </button>
+    </div>
+  </div>
+
+  <!-- Step 2: サイン -->
+  <div id="sign-step-sign" style="display:none;flex-direction:column;height:100%;">
+    <div style="background:var(--surface);border-bottom:0.5px solid var(--border);padding:0 1rem;height:54px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;">
+      <button onclick="backToConfirmStep()" style="background:none;border:none;cursor:pointer;display:flex;align-items:center;gap:6px;font-size:14px;color:var(--text2);">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+        確認に戻る
+      </button>
+      <span style="font-size:15px;font-weight:600;">お客様サイン</span>
+      <button onclick="clearFullSign()" style="background:none;border:none;cursor:pointer;font-size:13px;color:var(--text3);padding:4px 8px;">クリア</button>
+    </div>
+    <div style="padding:1rem;flex-shrink:0;">
+      <p style="font-size:13px;color:var(--text2);margin-bottom:10px;text-align:center;">枠内にサインをしてください</p>
+    </div>
+    <div style="flex:1;position:relative;margin:0 1rem;border:2px dashed var(--border2);border-radius:var(--radius-lg);overflow:hidden;background:var(--surface);min-height:0;">
+      <canvas id="fullSignPad" style="display:block;width:100%;height:100%;touch-action:none;cursor:crosshair;"></canvas>
+      <div id="fullSignHint" style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:16px;color:var(--text3);pointer-events:none;text-align:center;line-height:1.6;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="32" height="32" style="display:block;margin:0 auto 8px;stroke:var(--text3)"><path d="M17 3a2.828 2.828 0 114 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>
+        ここにサインしてください
+      </div>
+    </div>
+    <div style="padding:1rem;flex-shrink:0;">
+      <button class="btn btn-primary" onclick="completeSign()" id="complete-sign-btn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="17" height="17"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+        サインを確定してPDF保存
+      </button>
+    </div>
+  </div>
+
+</div>
+
 <script>
 // ════════════ STATE ════════════
 let currentUser = null;
 let currentFilter = 'all';
-let signHasDraw = false;
 let currentDetailId = null;
+let signingQueueId = null; // キューのどれをサインしているか
+
+// fullscreen sign pad
+let fsCanvas, fsCtx, fsDrawing = false, fsLastX = 0, fsLastY = 0, fsHasDraw = false;
 
 // ════════════ STORAGE ════════════
-function getRecords() {
-  try { return JSON.parse(localStorage.getItem('denpo_v1_records') || '[]'); } catch { return []; }
-}
+function getRecords() { try { return JSON.parse(localStorage.getItem('denpo_v1_records') || '[]'); } catch { return []; } }
 function saveRecords(r) { localStorage.setItem('denpo_v1_records', JSON.stringify(r)); }
+function getQueue() { try { return JSON.parse(localStorage.getItem('denpo_v1_queue') || '[]'); } catch { return []; } }
+function saveQueue(q) { localStorage.setItem('denpo_v1_queue', JSON.stringify(q)); }
+function getSettings() { try { return JSON.parse(localStorage.getItem('denpo_v1_settings') || '{}'); } catch { return {}; } }
+function saveSettingsData(s) { localStorage.setItem('denpo_v1_settings', JSON.stringify(s)); }
+
+// ════════════ AUTH ════════════
+function switchAuthTab(tab) {
+  document.querySelectorAll('.auth-tab').forEach((t,i) => t.classList.toggle('active', ['login','signup'][i] === tab));
+  document.getElementById('login-form').style.display = tab === 'login' ? '' : 'none';
+  document.getElementById('signup-form').style.display = tab === 'signup' ? '' : 'none';
+}
+function doLogin() {
+  const email = document.getElementById('login-email').value.trim();
+  const pass = document.getElementById('login-password').value;
+  if (!email || !pass) { showToast('メールとパスワードを入力してください'); return; }
+  currentUser = { email, name: email.split('@')[0] };
+  localStorage.setItem('denpo_v1_user', JSON.stringify(currentUser));
+  enterApp();
+}
+function doSignup() {
+  const company = document.getElementById('signup-company').value.trim();
+  const name = document.getElementById('signup-name').value.trim();
+  const email = document.getElementById('signup-email').value.trim();
+  const pass = document.getElementById('signup-password').value;
+  if (!company || !name || !email || !pass) { showToast('すべての項目を入力してください'); return; }
+  currentUser = { email, name, company };
+  localStorage.setItem('denpo_v1_user', JSON.stringify(currentUser));
+  const s = getSettings(); s.company = company; saveSettingsData(s);
+  enterApp();
+}
+function doLogout() {
+  localStorage.removeItem('denpo_v1_user');
+  currentUser = null;
+  document.getElementById('auth-screen').style.display = 'flex';
+  document.getElementById('app').style.display = 'none';
+}
+function enterApp() {
+  document.getElementById('auth-screen').style.display = 'none';
+  document.getElementById('app').style.display = 'flex';
+  document.getElementById('user-label').textContent = currentUser.name;
+  initFullSignPad();
+  setDefaults();
+  loadSettings();
+  updateHome();
+  setGreeting();
+}
+function setGreeting() {
+  const h = new Date().getHours();
+  const g = h < 12 ? 'おはようございます' : h < 18 ? 'こんにちは' : 'お疲れ様です';
+  document.getElementById('home-greeting').textContent = g + '、' + (currentUser.name || '') + 'さん';
+}
+
+// ════════════ STAFF MANAGEMENT ════════════
+function getStaffList() { try { return JSON.parse(localStorage.getItem('denpo_v1_staff') || '[]'); } catch { return []; } }
+function saveStaffList(list) { localStorage.setItem('denpo_v1_staff', JSON.stringify(list)); }
+function addStaff() {
+  const input = document.getElementById('s-staff-input');
+  const name = input.value.trim();
+  if (!name) { showToast('スタッフ名を入力してください'); return; }
+  const list = getStaffList();
+  if (list.includes(name)) { showToast('すでに登録されています'); return; }
+  list.push(name); saveStaffList(list); input.value = '';
+  renderStaffSettings(); refreshStaffSelect();
+  showToast(name + ' を登録しました');
+}
+function deleteStaff(name) {
+  saveStaffList(getStaffList().filter(s => s !== name));
+  renderStaffSettings(); refreshStaffSelect();
+  showToast(name + ' を削除しました');
+}
+function renderStaffSettings() {
+  const list = getStaffList();
+  const el = document.getElementById('staff-list-settings');
+  if (!list.length) { el.innerHTML = '<p style="font-size:13px;color:var(--text3);padding:4px 0">まだスタッフが登録されていません</p>'; return; }
+  el.innerHTML = list.map(name => `
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:9px 0;border-bottom:0.5px solid var(--border)">
+      <span style="font-size:14px">${name}</span>
+      <button class="icon-btn" onclick="deleteStaff('${name.replace(/'/g,"\\'")}')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>
+      </button>
+    </div>`).join('');
+}
+function refreshStaffSelect() {
+  const list = getStaffList();
+  const sel = document.getElementById('f-staff-select');
+  if (!sel) return;
+  const prev = sel.value;
+  sel.innerHTML = '';
+  const newOpt = document.createElement('option'); newOpt.value = '__new__'; newOpt.textContent = '＋ 新規スタッフ（手入力）'; sel.appendChild(newOpt);
+  list.forEach(name => { const opt = document.createElement('option'); opt.value = name; opt.textContent = name; sel.appendChild(opt); });
+  if (prev && prev !== '__new__' && list.includes(prev)) sel.value = prev;
+  else if (list.length > 0) sel.value = list[0];
+  else sel.value = '__new__';
+  onStaffSelectChange();
+}
+function onStaffSelectChange() {
+  const sel = document.getElementById('f-staff-select');
+  const newInput = document.getElementById('f-staff-new');
+  if (sel.value === '__new__') { newInput.style.display = ''; newInput.focus(); }
+  else { newInput.style.display = 'none'; newInput.value = ''; }
+}
+function getSelectedStaff() {
+  const sel = document.getElementById('f-staff-select');
+  if (sel.value === '__new__') return document.getElementById('f-staff-new').value.trim();
+  return sel.value;
+}
+
+// ════════════ FORM DEFAULTS ════════════
+function setDefaults() {
+  document.getElementById('f-date').value = new Date().toISOString().split('T')[0];
+  refreshStaffSelect();
+}
+function loadSettings() {
+  const s = getSettings();
+  if (s.company) document.getElementById('s-company').value = s.company;
+  if (s.sender) document.getElementById('s-sender').value = s.sender;
+  renderStaffSettings();
+}
+function saveSettings() {
+  const s = { company: document.getElementById('s-company').value.trim(), sender: document.getElementById('s-sender').value.trim() };
+  saveSettingsData(s); showToast('設定を保存しました');
+}
+
+// ════════════ SCREEN ROUTING ════════════
+function switchScreen(name) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('screen-' + name).classList.add('active');
+  document.getElementById('nav-' + name).classList.add('active');
+  if (name === 'home') updateHome();
+  if (name === 'list') renderList();
+  if (name === 'queue') renderQueue();
+  if (name === 'new') setDefaults();
+  window.scrollTo(0, 0);
+}
+
+// ════════════ HOME ════════════
+function updateHome() {
+  const records = getRecords();
+  const queue = getQueue();
+  const today = new Date().toISOString().split('T')[0];
+  document.getElementById('stat-total').textContent = records.length;
+  document.getElementById('stat-today').textContent = records.filter(r => r.date === today).length;
+  document.getElementById('stat-signed').textContent = records.filter(r => r.hasSig).length;
+  // queue badge
+  const badge = document.getElementById('queue-badge');
+  if (queue.length > 0) { badge.textContent = queue.length; badge.style.display = 'flex'; }
+  else { badge.style.display = 'none'; }
+
+  const container = document.getElementById('home-recent');
+  const recent = records.slice(0, 3);
+  if (!recent.length) {
+    container.innerHTML = '<div class="empty" style="padding:2rem 1rem"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg><div class="empty-title">伝票がまだありません</div><div class="empty-sub">「新規作成」から始めましょう</div></div>';
+  } else { container.innerHTML = recent.map(r => recordHTML(r)).join(''); }
+}
+
+// ════════════ QUEUE ════════════
+function getFormData() {
+  return {
+    project: document.getElementById('f-project').value.trim(),
+    site: document.getElementById('f-site').value.trim(),
+    staff: getSelectedStaff(),
+    date: document.getElementById('f-date').value,
+    hours: document.getElementById('f-hours').value,
+    note: document.getElementById('f-note').value.trim()
+  };
+}
+function validate(d) {
+  if (!d.project) { showToast('案件名を入力してください'); return false; }
+  if (!d.site) { showToast('現場名を入力してください'); return false; }
+  if (!d.staff) { showToast('スタッフ名を入力してください'); return false; }
+  if (!d.date) { showToast('稼働日を入力してください'); return false; }
+  if (!d.hours) { showToast('稼働時間を入力してください'); return false; }
+  return true;
+}
+function sendToSignQueue() {
+  const d = getFormData();
+  if (!validate(d)) return;
+  const item = { id: Date.now(), ...d, createdAt: new Date().toISOString() };
+  const queue = getQueue(); queue.unshift(item); saveQueue(queue);
+  // reset form
+  ['f-project','f-note'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('f-hours').value = '';
+  setDefaults();
+  updateHome();
+  showToast('サイン待ちに追加しました');
+  switchScreen('queue');
+}
+function previewDraft() {
+  const d = getFormData();
+  if (!validate(d)) return;
+  const uri = generatePDF({ ...d, hasSig: false, createdAt: new Date().toISOString() }, false);
+  window.open(uri, '_blank');
+}
+
+function renderQueue() {
+  const queue = getQueue();
+  const container = document.getElementById('queue-container');
+  if (!queue.length) {
+    container.innerHTML = `<div class="empty">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 22C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10-4.477 10-10 10z"/><path d="M9 12l2 2 4-4"/></svg>
+      <div class="empty-title">サイン待ちの伝票はありません</div>
+      <div class="empty-sub">「新規作成」で伝票を作成してください</div>
+    </div>`;
+    return;
+  }
+  container.innerHTML = queue.map(item => `
+    <div class="record-item" style="border-left:3px solid var(--amber-text);">
+      <div class="record-icon" style="background:var(--amber-bg);">
+        <svg viewBox="0 0 24 24" fill="none" stroke="var(--amber-text)" stroke-width="1.8" width="20" height="20"><path d="M17 3a2.828 2.828 0 114 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>
+      </div>
+      <div class="record-body">
+        <div class="record-name">${item.project}</div>
+        <div class="record-meta">${item.site} ／ ${item.staff} ／ ${item.date} ／ ${item.hours}h</div>
+        <div style="margin-top:6px">
+          <span class="badge" style="background:var(--amber-bg);color:var(--amber-text);">サイン待ち</span>
+        </div>
+      </div>
+      <div class="record-btns" style="flex-direction:column;gap:6px;">
+        <button class="btn btn-primary btn-sm" onclick="openSignFlow(${item.id})" style="white-space:nowrap;width:auto;padding:8px 12px;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M17 3a2.828 2.828 0 114 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>
+          サイン
+        </button>
+        <button class="icon-btn" onclick="removeFromQueue(${item.id})" title="削除">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/></svg>
+        </button>
+      </div>
+    </div>
+  `).join('');
+}
+
+function removeFromQueue(id) {
+  if (!confirm('サイン待ちから削除しますか？')) return;
+  saveQueue(getQueue().filter(q => q.id !== id));
+  renderQueue(); updateHome();
+  showToast('削除しました');
+}
+
+// ════════════ SIGN FLOW ════════════
+function openSignFlow(id) {
+  signingQueueId = id;
+  const item = getQueue().find(q => q.id === id);
+  if (!item) return;
+
+  // build confirm body
+  const fields = [
+    ['案件名', item.project],
+    ['現場名', item.site],
+    ['スタッフ', item.staff],
+    ['稼働日', item.date],
+    ['稼働時間', item.hours + ' 時間'],
+    ...(item.note ? [['備考', item.note]] : []),
+  ];
+  document.getElementById('confirm-body').innerHTML = fields.map(([l,v],i) => `
+    <div style="display:flex;padding:12px 16px;background:${i%2===0?'var(--surface2)':'var(--surface)'}">
+      <span style="font-size:12px;color:var(--text2);width:80px;flex-shrink:0;padding-top:1px">${l}</span>
+      <span style="font-size:14px;font-weight:500;">${v||'—'}</span>
+    </div>`).join('');
+
+  // show overlay at step 1
+  document.getElementById('sign-step-confirm').style.display = 'flex';
+  document.getElementById('sign-step-sign').style.display = 'none';
+  const overlay = document.getElementById('sign-overlay');
+  overlay.style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+}
+
+function closeSignOverlay() {
+  document.getElementById('sign-overlay').style.display = 'none';
+  document.body.style.overflow = '';
+  signingQueueId = null;
+}
+
+function goToSignStep() {
+  document.getElementById('sign-step-confirm').style.display = 'none';
+  const signStep = document.getElementById('sign-step-sign');
+  signStep.style.display = 'flex';
+  // resize canvas after layout
+  setTimeout(() => { resizeFullSignPad(); }, 50);
+}
+
+function backToConfirmStep() {
+  document.getElementById('sign-step-sign').style.display = 'none';
+  document.getElementById('sign-step-confirm').style.display = 'flex';
+  clearFullSign();
+}
+
+// ════════════ FULLSCREEN SIGN PAD ════════════
+function initFullSignPad() {
+  fsCanvas = document.getElementById('fullSignPad');
+  fsCtx = fsCanvas.getContext('2d');
+
+  function pos(e) {
+    const r = fsCanvas.getBoundingClientRect();
+    const src = e.touches ? e.touches[0] : e;
+    return { x: (src.clientX - r.left) * (fsCanvas.width / r.width), y: (src.clientY - r.top) * (fsCanvas.height / r.height) };
+  }
+  fsCanvas.addEventListener('mousedown', e => { fsDrawing = true; const p = pos(e); fsLastX = p.x; fsLastY = p.y; });
+  fsCanvas.addEventListener('mousemove', e => {
+    if (!fsDrawing) return;
+    const p = pos(e);
+    fsCtx.beginPath(); fsCtx.moveTo(fsLastX, fsLastY); fsCtx.lineTo(p.x, p.y); fsCtx.stroke();
+    fsLastX = p.x; fsLastY = p.y; markFSSigned();
+  });
+  fsCanvas.addEventListener('mouseup', () => fsDrawing = false);
+  fsCanvas.addEventListener('mouseleave', () => fsDrawing = false);
+  fsCanvas.addEventListener('touchstart', e => { e.preventDefault(); fsDrawing = true; const p = pos(e); fsLastX = p.x; fsLastY = p.y; }, { passive: false });
+  fsCanvas.addEventListener('touchmove', e => {
+    e.preventDefault();
+    if (!fsDrawing) return;
+    const p = pos(e);
+    fsCtx.beginPath(); fsCtx.moveTo(fsLastX, fsLastY); fsCtx.lineTo(p.x, p.y); fsCtx.stroke();
+    fsLastX = p.x; fsLastY = p.y; markFSSigned();
+  }, { passive: false });
+  fsCanvas.addEventListener('touchend', () => fsDrawing = false);
+}
+
+function resizeFullSignPad() {
+  if (!fsCanvas) return;
+  const dpr = window.devicePixelRatio || 1;
+  const rect = fsCanvas.getBoundingClientRect();
+  fsCanvas.width = rect.width * dpr;
+  fsCanvas.height = rect.height * dpr;
+  fsCtx.scale(dpr, dpr);
+  fsCtx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--text').trim() || '#1a1917';
+  fsCtx.lineWidth = 2.5;
+  fsCtx.lineCap = 'round';
+  fsCtx.lineJoin = 'round';
+  fsHasDraw = false;
+  document.getElementById('fullSignHint').style.opacity = '1';
+}
+
+function markFSSigned() {
+  fsHasDraw = true;
+  document.getElementById('fullSignHint').style.opacity = '0';
+}
+
+function clearFullSign() {
+  resizeFullSignPad();
+}
+
+function completeSign() {
+  if (!fsHasDraw) { showToast('サインしてから確定してください'); return; }
+  const sigData = fsCanvas.toDataURL('image/png');
+  const queue = getQueue();
+  const item = queue.find(q => q.id === signingQueueId);
+  if (!item) { showToast('エラー：伝票が見つかりません'); closeSignOverlay(); return; }
+
+  const record = { ...item, sigData, hasSig: true, signedAt: new Date().toISOString() };
+  const records = getRecords(); records.unshift(record); saveRecords(records);
+  saveQueue(queue.filter(q => q.id !== signingQueueId));
+
+  generatePDF(record, true);
+  closeSignOverlay();
+  updateHome();
+  showToast('サイン完了！PDFをダウンロードしています...');
+  switchScreen('list');
+}
+
+// ════════════ PDF ════════════
+function generatePDF(r, download) {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ unit: 'mm', format: 'a4' });
+  const W = 210, M = 20;
+
+  doc.setFillColor(26, 25, 23);
+  doc.rect(0, 0, W, 32, 'F');
+  doc.setTextColor(255,255,255);
+  doc.setFontSize(18); doc.setFont('helvetica','bold');
+  doc.text('作業完了伝票', M, 19);
+  doc.setFontSize(9); doc.setFont('helvetica','normal');
+  doc.text('AXIA Sign — SERVICE COMPLETION SLIP', W - M, 19, { align: 'right' });
+
+  doc.setTextColor(120,118,110); doc.setFontSize(8);
+  doc.text('発行日時：' + new Date(r.signedAt || r.createdAt || Date.now()).toLocaleString('ja-JP'), M, 40);
+  if (r.id) doc.text('伝票番号：' + r.id, W - M, 40, { align: 'right' });
+
+  const fields = [
+    ['案件名', r.project||''], ['現場名', r.site||''], ['スタッフ名', r.staff||''],
+    ['稼働日', r.date||''], ['稼働時間', (r.hours||'') + ' 時間'],
+  ];
+  if (r.note) fields.push(['備考', r.note]);
+
+  let y = 50;
+  fields.forEach(([label, val], i) => {
+    const bg = i % 2 === 0 ? [250,249,246] : [244,243,240];
+    doc.setFillColor(...bg); doc.rect(M, y - 4, W - M * 2, 12, 'F');
+    doc.setTextColor(120,118,110); doc.setFontSize(8); doc.setFont('helvetica','normal');
+    doc.text(label, M + 3, y + 2);
+    doc.setTextColor(26,25,23); doc.setFontSize(11); doc.setFont('helvetica','bold');
+    doc.text(val || '—', M + 52, y + 2);
+    y += 14;
+  });
+
+  y += 4;
+  doc.setTextColor(120,118,110); doc.setFontSize(9); doc.setFont('helvetica','normal');
+  doc.text('お客様サイン', M, y); y += 4;
+  const sigH = 45;
+  doc.setDrawColor(200,198,190); doc.setLineWidth(0.3);
+  doc.rect(M, y, W - M * 2, sigH);
+  if (r.sigData) { try { doc.addImage(r.sigData, 'PNG', M + 2, y + 2, W - M * 2 - 4, sigH - 4); } catch(e){} }
+  else { doc.setTextColor(180,178,170); doc.setFontSize(10); doc.text('サインなし', W/2, y + sigH/2, { align:'center', baseline:'middle' }); }
+  y += sigH + 6;
+
+  doc.setDrawColor(220,218,210); doc.setLineWidth(0.3); doc.line(M, y, W - M, y); y += 5;
+  doc.setTextColor(160,158,150); doc.setFontSize(7.5);
+  const s = getSettings();
+  doc.text(s.company || 'AXIA Sign', M, y);
+  doc.text('本書は電子伝票システムにより発行されました', W - M, y, { align: 'right' });
+
+  if (download) { doc.save('denpo_' + (r.project||'untitled') + '_' + (r.date||'') + '.pdf'); return null; }
+  return doc.output('datauristring');
+}
+
+// ════════════ LIST ════════════
+function setFilter(f, el) {
+  currentFilter = f;
+  document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+  el.classList.add('active'); renderList();
+}
+function renderList() {
+  const query = (document.getElementById('search-input')?.value || '').toLowerCase();
+  const today = new Date().toISOString().split('T')[0];
+  const weekAgo = new Date(Date.now() - 7 * 86400000).toISOString().split('T')[0];
+  let records = getRecords();
+  if (query) records = records.filter(r =>
+    (r.project||'').toLowerCase().includes(query) ||
+    (r.site||'').toLowerCase().includes(query) ||
+    (r.staff||'').toLowerCase().includes(query));
+  if (currentFilter === 'signed') records = records.filter(r => r.hasSig);
+  if (currentFilter === 'today') records = records.filter(r => r.date === today);
+  if (currentFilter === 'week') records = records.filter(r => r.date >= weekAgo);
+  const container = document.getElementById('list-container');
+  if (!records.length) {
+    container.innerHTML = '<div class="empty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg><div class="empty-title">伝票が見つかりません</div><div class="empty-sub">条件を変えて検索してみてください</div></div>';
+  } else { container.innerHTML = records.map(r => recordHTML(r)).join(''); }
+}
+function recordHTML(r) {
+  const badge = r.hasSig
+    ? '<span class="badge badge-green">サイン済み</span>'
+    : '<span class="badge badge-gray">サインなし</span>';
+  return `
+    <div class="record-item">
+      <div class="record-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></div>
+      <div class="record-body" onclick="openDetail(${r.id})" style="cursor:pointer">
+        <div class="record-name">${r.project||'（無題）'}</div>
+        <div class="record-meta">${r.site||''} ／ ${r.staff||''} ／ ${r.date||''} ／ ${r.hours||''}h</div>
+        <div style="margin-top:4px">${badge}</div>
+      </div>
+      <div class="record-btns">
+        <button class="icon-btn" onclick="downloadRecord(${r.id})" title="PDF"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></button>
+        <button class="icon-btn" onclick="openEmailModal(${r.id})" title="メール"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg></button>
+        <button class="icon-btn" onclick="deleteRecord(${r.id})" title="削除"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg></button>
+      </div>
+    </div>`;
+}
+function downloadRecord(id) {
+  const r = getRecords().find(x => x.id === id);
+  if (r) { generatePDF(r, true); showToast('PDFをダウンロードしています...'); }
+}
+function deleteRecord(id) {
+  if (!confirm('この伝票を削除しますか？')) return;
+  saveRecords(getRecords().filter(r => r.id !== id));
+  renderList(); updateHome(); showToast('削除しました');
+}
+
+// ════════════ DETAIL MODAL ════════════
+function openDetail(id) {
+  currentDetailId = id;
+  const r = getRecords().find(x => x.id === id);
+  if (!r) return;
+  document.getElementById('detail-title').textContent = r.project || '（無題）';
+  const rows = [
+    ['現場名', r.site], ['スタッフ', r.staff], ['稼働日', r.date],
+    ['稼働時間', (r.hours||'') + ' 時間'], ['備考', r.note || '—'],
+    ['サイン', r.hasSig ? 'あり' : 'なし'], ['作成日時', new Date(r.createdAt).toLocaleString('ja-JP')],
+  ];
+  document.getElementById('detail-body').innerHTML = `
+    <div style="border:0.5px solid var(--border);border-radius:var(--radius);overflow:hidden;margin-bottom:1rem">
+      ${rows.map(([l,v],i) => `<div style="display:flex;padding:10px 14px;background:${i%2===0?'var(--surface2)':'var(--surface)'}">
+        <span style="font-size:12px;color:var(--text2);width:80px;flex-shrink:0">${l}</span>
+        <span style="font-size:13px;font-weight:500">${v||'—'}</span>
+      </div>`).join('')}
+    </div>
+    ${r.sigData ? `<div style="border:0.5px solid var(--border);border-radius:var(--radius);padding:8px;margin-bottom:1rem"><img src="${r.sigData}" style="width:100%;height:80px;object-fit:contain"></div>` : ''}`;
+  document.getElementById('detail-actions').innerHTML = `
+    <button class="btn btn-ghost" style="flex:1" onclick="closeModal('detail-modal')">閉じる</button>
+    <button class="btn btn-ghost" style="flex:1" onclick="openEmailModal(${id});closeModal('detail-modal')">メール</button>
+    <button class="btn btn-primary" style="flex:1" onclick="downloadRecord(${id});closeModal('detail-modal')">PDF</button>`;
+  document.getElementById('detail-modal').classList.add('open');
+}
+
+// ════════════ EMAIL MODAL ════════════
+function openEmailModal(id) {
+  currentDetailId = id;
+  const r = getRecords().find(x => x.id === id);
+  if (!r) return;
+  document.getElementById('email-subject').value = `作業完了のご報告：${r.project}（${r.date}）`;
+  document.getElementById('email-body').value = `お世話になっております。\n${r.project}の作業が完了しましたので、完了伝票PDFをお送りします。\nご確認のほど、よろしくお願いいたします。`;
+  document.getElementById('email-modal').classList.add('open');
+}
+function sendEmail() {
+  const to = document.getElementById('email-to').value.trim();
+  if (!to) { showToast('送信先メールアドレスを入力してください'); return; }
+  closeModal('email-modal');
+  showToast('送信しました（デモモード）');
+  document.getElementById('email-to').value = '';
+}
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+document.querySelectorAll('.modal-backdrop').forEach(b => {
+  b.addEventListener('click', e => { if (e.target === b) b.classList.remove('open'); });
+});
+
+// ════════════ DATA UTILS ════════════
+function exportData() {
+  const data = { records: getRecords(), queue: getQueue(), settings: getSettings(), exportedAt: new Date().toISOString() };
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+  a.download = 'denpo_export_' + new Date().toISOString().split('T')[0] + '.json'; a.click();
+  showToast('エクスポートしました');
+}
+function clearAllData() {
+  if (!confirm('すべてのデータを削除しますか？\nこの操作は取り消せません。')) return;
+  localStorage.removeItem('denpo_v1_records'); localStorage.removeItem('denpo_v1_queue');
+  updateHome(); renderList(); showToast('データを削除しました');
+}
+
+// ════════════ TOAST ════════════
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2800);
+}
+
+// ════════════ BOOT ════════════
+const savedUser = localStorage.getItem('denpo_v1_user');
+if (savedUser) { try { currentUser = JSON.parse(savedUser); enterApp(); } catch {} }
+</script>
+
+</body>
+</html>
+
 function getSettings() {
   try { return JSON.parse(localStorage.getItem('denpo_v1_settings') || '{}'); } catch { return {}; }
 }
