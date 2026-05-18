@@ -191,8 +191,8 @@
         <input type="password" id="login-password" placeholder="••••••••" autocomplete="current-password">
       </div>
       <button class="btn btn-primary" onclick="doLogin()" style="margin-top:6px">ログイン</button>
-      <p style="text-align:center;font-size:12px;color:var(--text3);margin-top:14px">
-        ※ デモ用：メール・パスワードは何でもOK
+      <p style="text-align:center;font-size:12px;color:var(--text3);margin-top:14px;line-height:1.5;">
+        ※ 初回は必ず「新規登録」からアカウントを作ってください。<br>アドレスは架空（test@test.com等）でOKです。
       </p>
     </div>
 
@@ -211,7 +211,7 @@
       </div>
       <div class="field">
         <label>パスワード</label>
-        <input type="password" id="signup-password" placeholder="8文字以上">
+        <input type="password" id="signup-password" placeholder="6文字以上">
       </div>
       <button class="btn btn-primary" onclick="doSignup()" style="margin-top:6px">アカウント作成</button>
     </div>
@@ -613,16 +613,22 @@ async function doSignup() {
 }
 
 async function doLogout() {
+  showLoading('ログアウト中...');
   try {
     await fetch(`${SB_URL}/auth/v1/logout`, {
       method: 'POST',
       headers: { 'apikey': SB_KEY, 'Authorization': 'Bearer ' + currentUser?.token }
     });
-  } catch(e) {}
+  } catch(e) {
+    // サーバー側でエラーが起きてもスルーして次へ進む
+  }
+  // サーバーの成否に関わらず、ブラウザの記憶を確実に消去して戻す
   localStorage.removeItem('denpo_v1_user');
   currentUser = null;
   document.getElementById('auth-screen').style.display = 'flex';
   document.getElementById('app').style.display = 'none';
+  hideLoading();
+  location.reload(); // 画面をリフレッシュして安全に初期化
 }
 
 async function enterApp() {
