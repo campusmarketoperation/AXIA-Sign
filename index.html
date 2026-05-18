@@ -541,7 +541,12 @@ async function sbFetch(table, method = 'GET', body = null, query = '') {
     },
     body: body ? JSON.stringify(body) : null
   });
-  if (!res.ok) { const e = await res.text(); throw new Error(e); }
+  if (!res.ok) { 
+    // Supabaseからのエラーメッセージ（JSON）を解析してコンソールに強制出力
+    const errData = await res.json().catch(() => ({}));
+    console.error('❌【Supabaseエラーの具体的な理由】:', errData);
+    throw new Error(errData.message || errData.details || 'リクエスト失敗'); 
+  }
   if (method === 'DELETE' || res.status === 204) return null;
   return res.json();
 }
@@ -787,18 +792,20 @@ async function sendToSignQueue() {
   if (!validate(d)) return;
   showLoading('保存中...');
   try {
-    // 修正版：IDはSupabase側で自動生成させるため送信しない。hoursは数値に変換。
+    // 【対策】Supabase側のidが自動採番になっていなくても、int型(32bit)の制限に絶対に引っかからない8桁のランダム数字
+    const safeId = Math.floor(10000000 + Math.random() * 90000000);
+
     await sbFetch('sign_queue', 'POST', {
+      id: safeId, 
       user_id: currentUser.id,
       project: d.project,
       site: d.site,
       staff: d.staff,
       date: d.date,
-      hours: parseFloat(d.hours), // 文字列から数値（小数対応）に変換
+      hours: parseFloat(d.hours), // 数値に変換
       note: d.note
     });
     
-    // 入力欄をクリア
     ['f-project','f-note'].forEach(id => document.getElementById(id).value = '');
     document.getElementById('f-hours').value = '';
     await setDefaults();
@@ -807,6 +814,7 @@ async function sendToSignQueue() {
     await switchScreen('queue');
   } catch(e) { 
     hideLoading(); 
+    console.error('❌【フロントエンド実行エラー】:', e);
     showToast('エラー：' + e.message); 
   }
 }
