@@ -787,19 +787,28 @@ async function sendToSignQueue() {
   if (!validate(d)) return;
   showLoading('保存中...');
   try {
+    // 修正版：IDはSupabase側で自動生成させるため送信しない。hoursは数値に変換。
     await sbFetch('sign_queue', 'POST', {
-      id: Date.now(),
       user_id: currentUser.id,
-      project: d.project, site: d.site, staff: d.staff,
-      date: d.date, hours: d.hours, note: d.note
+      project: d.project,
+      site: d.site,
+      staff: d.staff,
+      date: d.date,
+      hours: parseFloat(d.hours), // 文字列から数値（小数対応）に変換
+      note: d.note
     });
+    
+    // 入力欄をクリア
     ['f-project','f-note'].forEach(id => document.getElementById(id).value = '');
     document.getElementById('f-hours').value = '';
     await setDefaults();
     hideLoading();
     showToast('サイン待ちに追加しました');
     await switchScreen('queue');
-  } catch(e) { hideLoading(); showToast('エラー：' + e.message); }
+  } catch(e) { 
+    hideLoading(); 
+    showToast('エラー：' + e.message); 
+  }
 }
 
 async function previewDraft() {
