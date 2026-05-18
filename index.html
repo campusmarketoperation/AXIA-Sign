@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>AXIA Sign — 電子伝票システム</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <style>
   :root {
     --bg: #f7f6f3;
@@ -54,22 +55,8 @@
   html, body { height: 100%; font-family: -apple-system, 'Hiragino Sans', 'Noto Sans JP', sans-serif; background: var(--bg); color: var(--text); font-size: 15px; }
 
   /* ── AUTH SCREEN ── */
-  #auth-screen {
-    min-height: 100vh;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: 2rem 1.5rem;
-  }
-  .auth-card {
-    background: var(--surface);
-    border-radius: var(--radius-lg);
-    box-shadow: var(--shadow);
-    padding: 2rem;
-    width: 100%;
-    max-width: 380px;
-  }
+  #auth-screen { min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 2rem 1.5rem; }
+  .auth-card { background: var(--surface); border-radius: var(--radius-lg); box-shadow: var(--shadow); padding: 2rem; width: 100%; max-width: 380px; }
   .auth-logo { font-size: 22px; font-weight: 700; letter-spacing: -0.5px; margin-bottom: 6px; }
   .auth-sub { font-size: 13px; color: var(--text2); margin-bottom: 2rem; }
   .auth-tabs { display: flex; border-bottom: 0.5px solid var(--border); margin-bottom: 1.5rem; }
@@ -80,26 +67,10 @@
   .field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px; }
   label { font-size: 12px; font-weight: 500; color: var(--text2); }
   input[type=text], input[type=email], input[type=password], input[type=date], input[type=number], select, textarea {
-    width: 100%;
-    padding: 10px 12px;
-    font-size: 15px;
-    font-family: inherit;
-    border: 0.5px solid var(--border2);
-    border-radius: var(--radius);
-    background: var(--surface);
-    color: var(--text);
-    outline: none;
-    transition: border-color 0.15s, box-shadow 0.15s;
-    -webkit-appearance: none;
-    appearance: none;
+    width: 100%; padding: 10px 12px; font-size: 15px; font-family: inherit; border: 0.5px solid var(--border2); border-radius: var(--radius); background: var(--surface); color: var(--text); outline: none; transition: border-color 0.15s, box-shadow 0.15s; -webkit-appearance: none; appearance: none;
   }
-  input:focus, select:focus, textarea:focus {
-    border-color: var(--text);
-    box-shadow: 0 0 0 3px rgba(0,0,0,0.06);
-  }
-  @media (prefers-color-scheme: dark) {
-    input:focus, select:focus, textarea:focus { box-shadow: 0 0 0 3px rgba(255,255,255,0.08); }
-  }
+  input:focus, select:focus, textarea:focus { border-color: var(--text); box-shadow: 0 0 0 3px rgba(0,0,0,0.06); }
+  @media (prefers-color-scheme: dark) { input:focus, select:focus, textarea:focus { box-shadow: 0 0 0 3px rgba(255,255,255,0.08); } }
   textarea { resize: none; }
   select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236b6963' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 12px center; padding-right: 36px; }
 
@@ -114,33 +85,12 @@
 
   /* ── APP SHELL ── */
   #app { display: none; min-height: 100vh; flex-direction: column; }
-  .topbar {
-    background: var(--surface);
-    border-bottom: 0.5px solid var(--border);
-    padding: 0 1rem;
-    height: 54px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    position: sticky;
-    top: 0;
-    z-index: 100;
-  }
+  .topbar { background: var(--surface); border-bottom: 0.5px solid var(--border); padding: 0 1rem; height: 54px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 100; }
   .topbar-logo { font-size: 17px; font-weight: 700; letter-spacing: -0.3px; }
   .topbar-right { display: flex; align-items: center; gap: 10px; }
   .user-badge { font-size: 12px; color: var(--text2); }
 
-  .nav {
-    background: var(--surface);
-    border-top: 0.5px solid var(--border);
-    display: flex;
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    z-index: 100;
-    padding-bottom: env(safe-area-inset-bottom);
-  }
+  .nav { background: var(--surface); border-top: 0.5px solid var(--border); display: flex; position: fixed; bottom: 0; left: 0; right: 0; z-index: 100; padding-bottom: env(safe-area-inset-bottom); }
   .nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 10px 4px 8px; cursor: pointer; font-size: 10px; font-weight: 500; color: var(--text3); border: none; background: none; transition: color 0.15s; }
   .nav-item.active { color: var(--text); }
   .nav-item svg { width: 22px; height: 22px; stroke-width: 1.8; }
@@ -150,35 +100,18 @@
   /* ── SCREENS ── */
   .screen { display: none; }
   .screen.active { display: block; }
-
   .page-title { font-size: 20px; font-weight: 700; letter-spacing: -0.3px; margin-bottom: 1.25rem; }
-
   .card { background: var(--surface); border-radius: var(--radius-lg); box-shadow: var(--shadow); padding: 1.25rem; margin-bottom: 1rem; }
-  .card-title { font-size: 13px; font-weight: 600; color: var(--text2); margin-bottom: 1rem; text-transform: none; letter-spacing: 0; }
-
+  .card-title { font-size: 13px; font-weight: 600; color: var(--text2); margin-bottom: 1rem; }
   .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
   @media (max-width: 400px) { .form-row { grid-template-columns: 1fr; } }
 
   /* ── SIGN PAD ── */
   .sign-pad-wrap { position: relative; border: 0.5px solid var(--border2); border-radius: var(--radius); overflow: hidden; background: var(--surface); }
-  #signPad { display: block; width: 100%; height: 180px; touch-action: none; cursor: crosshair; }
-  .sign-hint { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); font-size: 13px; color: var(--text3); pointer-events: none; transition: opacity 0.2s; }
-  .sign-hint.hidden { opacity: 0; }
   .sign-actions { display: flex; justify-content: flex-end; margin-top: 6px; }
-  .clear-link { font-size: 12px; color: var(--text3); background: none; border: none; cursor: pointer; padding: 4px 8px; border-radius: 6px; }
-  .clear-link:hover { color: var(--text2); background: var(--surface2); }
 
   /* ── RECORD LIST ── */
-  .record-item {
-    background: var(--surface);
-    border-radius: var(--radius-lg);
-    box-shadow: var(--shadow);
-    padding: 14px 16px;
-    margin-bottom: 10px;
-    display: flex;
-    align-items: center;
-    gap: 12px;
-  }
+  .record-item { background: var(--surface); border-radius: var(--radius-lg); box-shadow: var(--shadow); padding: 14px 16px; margin-bottom: 10px; display: flex; align-items: center; gap: 12px; }
   .record-icon { width: 40px; height: 40px; border-radius: 10px; background: var(--surface2); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
   .record-icon svg { width: 20px; height: 20px; stroke: var(--text2); stroke-width: 1.8; }
   .record-body { flex: 1; min-width: 0; }
@@ -224,14 +157,9 @@
   .setting-label { font-size: 14px; }
   .setting-sub { font-size: 12px; color: var(--text2); margin-top: 2px; }
 
-  /* ── DIVIDER ── */
-  .divider { height: 0.5px; background: var(--border); margin: 1rem 0; }
-
-  /* ── SECTION HEADER ── */
   .section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
   .section-title { font-size: 13px; font-weight: 600; color: var(--text2); }
 
-  /* ── FILTER BAR ── */
   .filter-bar { display: flex; gap: 8px; margin-bottom: 14px; overflow-x: auto; padding-bottom: 2px; }
   .filter-chip { flex-shrink: 0; padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: 500; cursor: pointer; border: 0.5px solid var(--border2); background: var(--surface); color: var(--text2); transition: all 0.15s; }
   .filter-chip.active { background: var(--text); color: var(--bg); border-color: var(--text); }
@@ -244,7 +172,6 @@
 </head>
 <body>
 
-<!-- ════════════ AUTH SCREEN ════════════ -->
 <div id="auth-screen">
   <div class="auth-card">
     <div class="auth-logo">AXIA Sign</div>
@@ -254,7 +181,6 @@
       <button class="auth-tab" onclick="switchAuthTab('signup')">新規登録</button>
     </div>
 
-    <!-- LOGIN -->
     <div id="login-form">
       <div class="field">
         <label>メールアドレス</label>
@@ -270,7 +196,6 @@
       </p>
     </div>
 
-    <!-- SIGNUP -->
     <div id="signup-form" style="display:none">
       <div class="field">
         <label>会社名</label>
@@ -293,7 +218,6 @@
   </div>
 </div>
 
-<!-- ════════════ APP ════════════ -->
 <div id="app">
   <div class="topbar">
     <div class="topbar-logo">AXIA Sign</div>
@@ -304,7 +228,6 @@
   </div>
 
   <div class="content">
-    <!-- ── ホーム ── -->
     <div class="screen active" id="screen-home">
       <div class="page-title" id="home-greeting">おはようございます</div>
       <div class="stats">
@@ -334,7 +257,6 @@
       </button>
     </div>
 
-    <!-- ── 新規作成 ── -->
     <div class="screen" id="screen-new">
       <div class="page-title">新規伝票作成</div>
 
@@ -385,13 +307,11 @@
       </div>
     </div>
 
-    <!-- ── サイン待ち ── -->
     <div class="screen" id="screen-queue">
       <div class="page-title">サイン待ち</div>
       <div id="queue-container"></div>
     </div>
 
-    <!-- ── 伝票一覧 ── -->
     <div class="screen" id="screen-list">
       <div class="page-title">伝票一覧</div>
 
@@ -412,7 +332,6 @@
       <div id="list-container"></div>
     </div>
 
-    <!-- ── 設定 ── -->
     <div class="screen" id="screen-settings">
       <div class="page-title">設定</div>
 
@@ -496,10 +415,7 @@
         </div>
       </div>
     </div>
-  </div><!-- /content -->
-
-  <!-- ── BOTTOM NAV ── -->
-  <nav class="nav">
+  </div><nav class="nav">
     <button class="nav-item active" id="nav-home" onclick="switchScreen('home')">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
       ホーム
@@ -518,14 +434,11 @@
       伝票一覧
     </button>
     <button class="nav-item" id="nav-settings" onclick="switchScreen('settings')">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
       設定
     </button>
   </nav>
-</div><!-- /app -->
-
-<!-- ── EMAIL MODAL ── -->
-<div class="modal-backdrop" id="email-modal">
+</div><div class="modal-backdrop" id="email-modal">
   <div class="modal">
     <div class="modal-handle"></div>
     <div class="modal-title">PDFをメールで送信</div>
@@ -548,7 +461,6 @@
   </div>
 </div>
 
-<!-- ── DETAIL MODAL ── -->
 <div class="modal-backdrop" id="detail-modal">
   <div class="modal">
     <div class="modal-handle"></div>
@@ -560,10 +472,8 @@
 
 <div class="toast" id="toast"></div>
 
-<!-- ════════════ FULLSCREEN SIGN FLOW ════════════ -->
 <div id="sign-overlay" style="display:none;position:fixed;inset:0;z-index:500;background:var(--bg);flex-direction:column;">
 
-  <!-- Step 1: 内容確認 -->
   <div id="sign-step-confirm" style="display:flex;flex-direction:column;height:100%;">
     <div style="background:var(--surface);border-bottom:0.5px solid var(--border);padding:0 1rem;height:54px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;">
       <button onclick="closeSignOverlay()" style="background:none;border:none;cursor:pointer;display:flex;align-items:center;gap:6px;font-size:14px;color:var(--text2);">
@@ -586,7 +496,6 @@
     </div>
   </div>
 
-  <!-- Step 2: サイン -->
   <div id="sign-step-sign" style="display:none;flex-direction:column;height:100%;">
     <div style="background:var(--surface);border-bottom:0.5px solid var(--border);padding:0 1rem;height:54px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;">
       <button onclick="backToConfirmStep()" style="background:none;border:none;cursor:pointer;display:flex;align-items:center;gap:6px;font-size:14px;color:var(--text2);">
@@ -617,20 +526,34 @@
 </div>
 
 <script>
+// ════════════ SUPABASE CONFIG ════════════
+const SB_URL = 'https://unoepkpszkwwctgibavg.supabase.co';
+const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVub2Vwa3Bzemt3d2N0Z2liYXZnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkwMDg2NjQsImV4cCI6MjA5NDU4NDY2NH0.JRnrSI3Q4jNpkiC7EOguhcTIq0OSp42SnlcJPLxtd7U';
+
+async function sbFetch(table, method = 'GET', body = null, query = '') {
+  const res = await fetch(`${SB_URL}/rest/v1/${table}${query}`, {
+    method,
+    headers: {
+      'apikey': SB_KEY,
+      'Authorization': 'Bearer ' + SB_KEY,
+      'Content-Type': 'application/json',
+      'Prefer': method === 'POST' ? 'return=representation' : ''
+    },
+    body: body ? JSON.stringify(body) : null
+  });
+  if (!res.ok) { const e = await res.text(); throw new Error(e); }
+  if (method === 'DELETE' || res.status === 204) return null;
+  return res.json();
+}
+
 // ════════════ STATE ════════════
 let currentUser = null;
 let currentFilter = 'all';
 let currentDetailId = null;
-let signingQueueId = null; // キューのどれをサインしているか
-
-// fullscreen sign pad
+let signingQueueId = null;
 let fsCanvas, fsCtx, fsDrawing = false, fsLastX = 0, fsLastY = 0, fsHasDraw = false;
 
-// ════════════ STORAGE ════════════
-function getRecords() { try { return JSON.parse(localStorage.getItem('denpo_v1_records') || '[]'); } catch { return []; } }
-function saveRecords(r) { localStorage.setItem('denpo_v1_records', JSON.stringify(r)); }
-function getQueue() { try { return JSON.parse(localStorage.getItem('denpo_v1_queue') || '[]'); } catch { return []; } }
-function saveQueue(q) { localStorage.setItem('denpo_v1_queue', JSON.stringify(q)); }
+// ════════════ SETTINGS（ローカルのみ）════════════
 function getSettings() { try { return JSON.parse(localStorage.getItem('denpo_v1_settings') || '{}'); } catch { return {}; } }
 function saveSettingsData(s) { localStorage.setItem('denpo_v1_settings', JSON.stringify(s)); }
 
@@ -640,41 +563,76 @@ function switchAuthTab(tab) {
   document.getElementById('login-form').style.display = tab === 'login' ? '' : 'none';
   document.getElementById('signup-form').style.display = tab === 'signup' ? '' : 'none';
 }
-function doLogin() {
+
+async function doLogin() {
   const email = document.getElementById('login-email').value.trim();
   const pass = document.getElementById('login-password').value;
   if (!email || !pass) { showToast('メールとパスワードを入力してください'); return; }
-  currentUser = { email, name: email.split('@')[0] };
-  localStorage.setItem('denpo_v1_user', JSON.stringify(currentUser));
-  enterApp();
+  showLoading('ログイン中...');
+  try {
+    const res = await fetch(`${SB_URL}/auth/v1/token?grant_type=password`, {
+      method: 'POST',
+      headers: { 'apikey': SB_KEY, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password: pass })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error_description || data.msg || 'ログイン失敗');
+    currentUser = { id: data.user.id, email: data.user.email, name: data.user.user_metadata?.name || email.split('@')[0], token: data.access_token };
+    localStorage.setItem('denpo_v1_user', JSON.stringify(currentUser));
+    hideLoading();
+    enterApp();
+  } catch(e) { hideLoading(); showToast('エラー：' + e.message); }
 }
-function doSignup() {
+
+async function doSignup() {
   const company = document.getElementById('signup-company').value.trim();
   const name = document.getElementById('signup-name').value.trim();
   const email = document.getElementById('signup-email').value.trim();
   const pass = document.getElementById('signup-password').value;
   if (!company || !name || !email || !pass) { showToast('すべての項目を入力してください'); return; }
-  currentUser = { email, name, company };
-  localStorage.setItem('denpo_v1_user', JSON.stringify(currentUser));
-  const s = getSettings(); s.company = company; saveSettingsData(s);
-  enterApp();
+  if (pass.length < 6) { showToast('パスワードは6文字以上にしてください'); return; }
+  showLoading('アカウント作成中...');
+  try {
+    const res = await fetch(`${SB_URL}/auth/v1/signup`, {
+      method: 'POST',
+      headers: { 'apikey': SB_KEY, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password: pass, data: { name, company } })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error_description || data.msg || '登録失敗');
+    hideLoading();
+    showToast('登録完了！ログインしてください');
+    switchAuthTab('login');
+    document.getElementById('login-email').value = email;
+  } catch(e) { hideLoading(); showToast('エラー：' + e.message); }
 }
-function doLogout() {
+
+async function doLogout() {
+  try {
+    await fetch(`${SB_URL}/auth/v1/logout`, {
+      method: 'POST',
+      headers: { 'apikey': SB_KEY, 'Authorization': 'Bearer ' + currentUser?.token }
+    });
+  } catch(e) {}
   localStorage.removeItem('denpo_v1_user');
   currentUser = null;
   document.getElementById('auth-screen').style.display = 'flex';
   document.getElementById('app').style.display = 'none';
 }
-function enterApp() {
+
+async function enterApp() {
   document.getElementById('auth-screen').style.display = 'none';
   document.getElementById('app').style.display = 'flex';
   document.getElementById('user-label').textContent = currentUser.name;
   initFullSignPad();
   setDefaults();
   loadSettings();
-  updateHome();
+  showLoading('データを読み込み中...');
+  await updateHome();
+  hideLoading();
   setGreeting();
 }
+
 function setGreeting() {
   const h = new Date().getHours();
   const g = h < 12 ? 'おはようございます' : h < 18 ? 'こんにちは' : 'お疲れ様です';
@@ -682,25 +640,37 @@ function setGreeting() {
 }
 
 // ════════════ STAFF MANAGEMENT ════════════
-function getStaffList() { try { return JSON.parse(localStorage.getItem('denpo_v1_staff') || '[]'); } catch { return []; } }
-function saveStaffList(list) { localStorage.setItem('denpo_v1_staff', JSON.stringify(list)); }
-function addStaff() {
+async function addStaff() {
   const input = document.getElementById('s-staff-input');
   const name = input.value.trim();
   if (!name) { showToast('スタッフ名を入力してください'); return; }
-  const list = getStaffList();
-  if (list.includes(name)) { showToast('すでに登録されています'); return; }
-  list.push(name); saveStaffList(list); input.value = '';
-  renderStaffSettings(); refreshStaffSelect();
-  showToast(name + ' を登録しました');
+  try {
+    await sbFetch('staff', 'POST', { user_id: currentUser.id, name });
+    input.value = '';
+    await renderStaffSettings();
+    await refreshStaffSelect();
+    showToast(name + ' を登録しました');
+  } catch(e) { showToast('エラー：' + e.message); }
 }
-function deleteStaff(name) {
-  saveStaffList(getStaffList().filter(s => s !== name));
-  renderStaffSettings(); refreshStaffSelect();
-  showToast(name + ' を削除しました');
+
+async function deleteStaff(name) {
+  try {
+    await sbFetch('staff', 'DELETE', null, `?user_id=eq.${currentUser.id}&name=eq.${encodeURIComponent(name)}`);
+    await renderStaffSettings();
+    await refreshStaffSelect();
+    showToast(name + ' を削除しました');
+  } catch(e) { showToast('エラー：' + e.message); }
 }
-function renderStaffSettings() {
-  const list = getStaffList();
+
+async function fetchStaffList() {
+  try {
+    const rows = await sbFetch('staff', 'GET', null, `?user_id=eq.${currentUser.id}&order=created_at.asc`);
+    return (rows || []).map(r => r.name);
+  } catch { return []; }
+}
+
+async function renderStaffSettings() {
+  const list = await fetchStaffList();
   const el = document.getElementById('staff-list-settings');
   if (!list.length) { el.innerHTML = '<p style="font-size:13px;color:var(--text3);padding:4px 0">まだスタッフが登録されていません</p>'; return; }
   el.innerHTML = list.map(name => `
@@ -711,8 +681,9 @@ function renderStaffSettings() {
       </button>
     </div>`).join('');
 }
-function refreshStaffSelect() {
-  const list = getStaffList();
+
+async function refreshStaffSelect() {
+  const list = await fetchStaffList();
   const sel = document.getElementById('f-staff-select');
   if (!sel) return;
   const prev = sel.value;
@@ -724,12 +695,14 @@ function refreshStaffSelect() {
   else sel.value = '__new__';
   onStaffSelectChange();
 }
+
 function onStaffSelectChange() {
   const sel = document.getElementById('f-staff-select');
   const newInput = document.getElementById('f-staff-new');
   if (sel.value === '__new__') { newInput.style.display = ''; newInput.focus(); }
   else { newInput.style.display = 'none'; newInput.value = ''; }
 }
+
 function getSelectedStaff() {
   const sel = document.getElementById('f-staff-select');
   if (sel.value === '__new__') return document.getElementById('f-staff-new').value.trim();
@@ -737,9 +710,9 @@ function getSelectedStaff() {
 }
 
 // ════════════ FORM DEFAULTS ════════════
-function setDefaults() {
+async function setDefaults() {
   document.getElementById('f-date').value = new Date().toISOString().split('T')[0];
-  refreshStaffSelect();
+  await refreshStaffSelect();
 }
 function loadSettings() {
   const s = getSettings();
@@ -753,36 +726,40 @@ function saveSettings() {
 }
 
 // ════════════ SCREEN ROUTING ════════════
-function switchScreen(name) {
+async function switchScreen(name) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
   document.getElementById('screen-' + name).classList.add('active');
   document.getElementById('nav-' + name).classList.add('active');
-  if (name === 'home') updateHome();
-  if (name === 'list') renderList();
-  if (name === 'queue') renderQueue();
-  if (name === 'new') setDefaults();
+  if (name === 'home') await updateHome();
+  if (name === 'list') await renderList();
+  if (name === 'queue') await renderQueue();
+  if (name === 'new') await setDefaults();
   window.scrollTo(0, 0);
 }
 
 // ════════════ HOME ════════════
-function updateHome() {
-  const records = getRecords();
-  const queue = getQueue();
-  const today = new Date().toISOString().split('T')[0];
-  document.getElementById('stat-total').textContent = records.length;
-  document.getElementById('stat-today').textContent = records.filter(r => r.date === today).length;
-  document.getElementById('stat-signed').textContent = records.filter(r => r.hasSig).length;
-  // queue badge
-  const badge = document.getElementById('queue-badge');
-  if (queue.length > 0) { badge.textContent = queue.length; badge.style.display = 'flex'; }
-  else { badge.style.display = 'none'; }
+async function updateHome() {
+  try {
+    const [records, queue] = await Promise.all([
+      sbFetch('records', 'GET', null, `?user_id=eq.${currentUser.id}&order=created_at.desc`),
+      sbFetch('sign_queue', 'GET', null, `?user_id=eq.${currentUser.id}&order=created_at.desc`)
+    ]);
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('stat-total').textContent = records.length;
+    document.getElementById('stat-today').textContent = records.filter(r => r.date === today).length;
+    document.getElementById('stat-signed').textContent = records.filter(r => r.has_sig).length;
 
-  const container = document.getElementById('home-recent');
-  const recent = records.slice(0, 3);
-  if (!recent.length) {
-    container.innerHTML = '<div class="empty" style="padding:2rem 1rem"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg><div class="empty-title">伝票がまだありません</div><div class="empty-sub">「新規作成」から始めましょう</div></div>';
-  } else { container.innerHTML = recent.map(r => recordHTML(r)).join(''); }
+    const badge = document.getElementById('queue-badge');
+    if (queue.length > 0) { badge.textContent = queue.length; badge.style.display = 'flex'; }
+    else { badge.style.display = 'none'; }
+
+    const container = document.getElementById('home-recent');
+    const recent = records.slice(0, 3);
+    if (!recent.length) {
+      container.innerHTML = '<div class="empty" style="padding:2rem 1rem"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg><div class="empty-title">伝票がまだありません</div><div class="empty-sub">「新規作成」から始めましょう</div></div>';
+    } else { container.innerHTML = recent.map(r => recordHTML(r)).join(''); }
+  } catch(e) { showToast('データ読み込みエラー'); }
 }
 
 // ════════════ QUEUE ════════════
@@ -804,96 +781,105 @@ function validate(d) {
   if (!d.hours) { showToast('稼働時間を入力してください'); return false; }
   return true;
 }
-function sendToSignQueue() {
+
+async function sendToSignQueue() {
   const d = getFormData();
   if (!validate(d)) return;
-  const item = { id: Date.now(), ...d, createdAt: new Date().toISOString() };
-  const queue = getQueue(); queue.unshift(item); saveQueue(queue);
-  // reset form
-  ['f-project','f-note'].forEach(id => document.getElementById(id).value = '');
-  document.getElementById('f-hours').value = '';
-  setDefaults();
-  updateHome();
-  showToast('サイン待ちに追加しました');
-  switchScreen('queue');
-}
-function previewDraft() {
-  const d = getFormData();
-  if (!validate(d)) return;
-  const uri = generatePDF({ ...d, hasSig: false, createdAt: new Date().toISOString() }, false);
-  window.open(uri, '_blank');
+  showLoading('保存中...');
+  try {
+    await sbFetch('sign_queue', 'POST', {
+      id: Date.now(),
+      user_id: currentUser.id,
+      project: d.project, site: d.site, staff: d.staff,
+      date: d.date, hours: d.hours, note: d.note
+    });
+    ['f-project','f-note'].forEach(id => document.getElementById(id).value = '');
+    document.getElementById('f-hours').value = '';
+    await setDefaults();
+    hideLoading();
+    showToast('サイン待ちに追加しました');
+    await switchScreen('queue');
+  } catch(e) { hideLoading(); showToast('エラー：' + e.message); }
 }
 
-function renderQueue() {
-  const queue = getQueue();
+async function previewDraft() {
+  const d = getFormData();
+  if (!validate(d)) return;
+  showLoading('プレビューを生成中...');
+  try {
+    const uri = await generatePDF({ ...d, has_sig: false, created_at: new Date().toISOString() }, false);
+    hideLoading();
+    if (uri) window.open(uri, '_blank');
+  } catch(e) { hideLoading(); showToast('プレビュー生成に失敗しました。ローカルサーバー経由で起動してください。'); }
+}
+
+async function renderQueue() {
   const container = document.getElementById('queue-container');
-  if (!queue.length) {
-    container.innerHTML = `<div class="empty">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 22C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10-4.477 10-10 10z"/><path d="M9 12l2 2 4-4"/></svg>
-      <div class="empty-title">サイン待ちの伝票はありません</div>
-      <div class="empty-sub">「新規作成」で伝票を作成してください</div>
-    </div>`;
-    return;
-  }
-  container.innerHTML = queue.map(item => `
-    <div class="record-item" style="border-left:3px solid var(--amber-text);">
-      <div class="record-icon" style="background:var(--amber-bg);">
-        <svg viewBox="0 0 24 24" fill="none" stroke="var(--amber-text)" stroke-width="1.8" width="20" height="20"><path d="M17 3a2.828 2.828 0 114 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>
-      </div>
-      <div class="record-body">
-        <div class="record-name">${item.project}</div>
-        <div class="record-meta">${item.site} ／ ${item.staff} ／ ${item.date} ／ ${item.hours}h</div>
-        <div style="margin-top:6px">
-          <span class="badge" style="background:var(--amber-bg);color:var(--amber-text);">サイン待ち</span>
+  container.innerHTML = '<div class="empty" style="padding:2rem 1rem;color:var(--text3)">読み込み中...</div>';
+  try {
+    const queue = await sbFetch('sign_queue', 'GET', null, `?user_id=eq.${currentUser.id}&order=created_at.desc`);
+    if (!queue.length) {
+      container.innerHTML = `<div class="empty">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 22C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10-4.477 10-10 10z"/><path d="M9 12l2 2 4-4"/></svg>
+        <div class="empty-title">サイン待ちの伝票はありません</div>
+        <div class="empty-sub">「新規作成」で伝票を作成してください</div>
+      </div>`;
+      return;
+    }
+    container.innerHTML = queue.map(item => `
+      <div class="record-item" style="border-left:3px solid var(--amber-text);">
+        <div class="record-icon" style="background:var(--amber-bg);">
+          <svg viewBox="0 0 24 24" fill="none" stroke="var(--amber-text)" stroke-width="1.8" width="20" height="20"><path d="M17 3a2.828 2.828 0 114 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>
         </div>
-      </div>
-      <div class="record-btns" style="flex-direction:column;gap:6px;">
-        <button class="btn btn-primary btn-sm" onclick="openSignFlow(${item.id})" style="white-space:nowrap;width:auto;padding:8px 12px;">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M17 3a2.828 2.828 0 114 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>
-          サイン
-        </button>
-        <button class="icon-btn" onclick="removeFromQueue(${item.id})" title="削除">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/></svg>
-        </button>
-      </div>
-    </div>
-  `).join('');
+        <div class="record-body">
+          <div class="record-name">${item.project}</div>
+          <div class="record-meta">${item.site} ／ ${item.staff} ／ ${item.date} ／ ${item.hours}h</div>
+          <div style="margin-top:6px"><span class="badge" style="background:var(--amber-bg);color:var(--amber-text);">サイン待ち</span></div>
+        </div>
+        <div class="record-btns" style="flex-direction:column;gap:6px;">
+          <button class="btn btn-primary btn-sm" onclick="openSignFlow(${item.id})" style="white-space:nowrap;width:auto;padding:8px 12px;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M17 3a2.828 2.828 0 114 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>
+            サイン
+          </button>
+          <button class="icon-btn" onclick="removeFromQueue(${item.id})" title="削除">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/></svg>
+          </button>
+        </div>
+      </div>`).join('');
+  } catch(e) { container.innerHTML = '<div class="empty">読み込みに失敗しました</div>'; }
 }
 
-function removeFromQueue(id) {
+async function removeFromQueue(id) {
   if (!confirm('サイン待ちから削除しますか？')) return;
-  saveQueue(getQueue().filter(q => q.id !== id));
-  renderQueue(); updateHome();
-  showToast('削除しました');
+  try {
+    await sbFetch('sign_queue', 'DELETE', null, `?id=eq.${id}&user_id=eq.${currentUser.id}`);
+    await renderQueue(); await updateHome();
+    showToast('削除しました');
+  } catch(e) { showToast('エラー：' + e.message); }
 }
 
 // ════════════ SIGN FLOW ════════════
-function openSignFlow(id) {
+async function openSignFlow(id) {
   signingQueueId = id;
-  const item = getQueue().find(q => q.id === id);
-  if (!item) return;
-
-  // build confirm body
-  const fields = [
-    ['案件名', item.project],
-    ['現場名', item.site],
-    ['スタッフ', item.staff],
-    ['稼働日', item.date],
-    ['稼働時間', item.hours + ' 時間'],
-    ...(item.note ? [['備考', item.note]] : []),
-  ];
-  document.getElementById('confirm-body').innerHTML = fields.map(([l,v],i) => `
-    <div style="display:flex;padding:12px 16px;background:${i%2===0?'var(--surface2)':'var(--surface)'}">
-      <span style="font-size:12px;color:var(--text2);width:80px;flex-shrink:0;padding-top:1px">${l}</span>
-      <span style="font-size:14px;font-weight:500;">${v||'—'}</span>
-    </div>`).join('');
-
-  // show overlay at step 1
-  document.getElementById('sign-step-confirm').style.display = 'flex';
-  document.getElementById('sign-step-sign').style.display = 'none';
-  const overlay = document.getElementById('sign-overlay');
-  overlay.style.display = 'flex';
-  document.body.style.overflow = 'hidden';
+  try {
+    const rows = await sbFetch('sign_queue', 'GET', null, `?id=eq.${id}&user_id=eq.${currentUser.id}`);
+    const item = rows[0];
+    if (!item) { showToast('伝票が見つかりません'); return; }
+    const fields = [
+      ['案件名', item.project], ['現場名', item.site], ['スタッフ', item.staff],
+      ['稼働日', item.date], ['稼働時間', item.hours + ' 時間'],
+      ...(item.note ? [['備考', item.note]] : []),
+    ];
+    document.getElementById('confirm-body').innerHTML = fields.map(([l,v],i) => `
+      <div style="display:flex;padding:12px 16px;background:${i%2===0?'var(--surface2)':'var(--surface)'}">
+        <span style="font-size:12px;color:var(--text2);width:80px;flex-shrink:0;padding-top:1px">${l}</span>
+        <span style="font-size:14px;font-weight:500;">${v||'—'}</span>
+      </div>`).join('');
+    document.getElementById('sign-step-confirm').style.display = 'flex';
+    document.getElementById('sign-step-sign').style.display = 'none';
+    document.getElementById('sign-overlay').style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+  } catch(e) { showToast('エラー：' + e.message); }
 }
 
 function closeSignOverlay() {
@@ -906,7 +892,6 @@ function goToSignStep() {
   document.getElementById('sign-step-confirm').style.display = 'none';
   const signStep = document.getElementById('sign-step-sign');
   signStep.style.display = 'flex';
-  // resize canvas after layout
   setTimeout(() => { resizeFullSignPad(); }, 50);
 }
 
@@ -916,15 +901,19 @@ function backToConfirmStep() {
   clearFullSign();
 }
 
-// ════════════ FULLSCREEN SIGN PAD ════════════
+// ════════════ FULLSCREEN SIGN PAD（ズレの修正箇所） ════════════
 function initFullSignPad() {
   fsCanvas = document.getElementById('fullSignPad');
   fsCtx = fsCanvas.getContext('2d');
 
+  // 【修正】高解像度化に惑わされないシンプルなCSSピクセル相対座標に変更
   function pos(e) {
     const r = fsCanvas.getBoundingClientRect();
     const src = e.touches ? e.touches[0] : e;
-    return { x: (src.clientX - r.left) * (fsCanvas.width / r.width), y: (src.clientY - r.top) * (fsCanvas.height / r.height) };
+    return { 
+      x: src.clientX - r.left, 
+      y: src.clientY - r.top 
+    };
   }
   fsCanvas.addEventListener('mousedown', e => { fsDrawing = true; const p = pos(e); fsLastX = p.x; fsLastY = p.y; });
   fsCanvas.addEventListener('mousemove', e => {
@@ -952,9 +941,9 @@ function resizeFullSignPad() {
   const rect = fsCanvas.getBoundingClientRect();
   fsCanvas.width = rect.width * dpr;
   fsCanvas.height = rect.height * dpr;
-  fsCtx.scale(dpr, dpr);
+  fsCtx.scale(dpr, dpr); // コンテキストの拡大
   fsCtx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--text').trim() || '#1a1917';
-  fsCtx.lineWidth = 2.5;
+  fsCtx.lineWidth = 3;
   fsCtx.lineCap = 'round';
   fsCtx.lineJoin = 'round';
   fsHasDraw = false;
@@ -970,76 +959,110 @@ function clearFullSign() {
   resizeFullSignPad();
 }
 
-function completeSign() {
+async function completeSign() {
   if (!fsHasDraw) { showToast('サインしてから確定してください'); return; }
   const sigData = fsCanvas.toDataURL('image/png');
-  const queue = getQueue();
-  const item = queue.find(q => q.id === signingQueueId);
-  if (!item) { showToast('エラー：伝票が見つかりません'); closeSignOverlay(); return; }
+  showLoading('保存中...');
+  try {
+    const rows = await sbFetch('sign_queue', 'GET', null, `?id=eq.${signingQueueId}&user_id=eq.${currentUser.id}`);
+    const item = rows[0];
+    if (!item) throw new Error('伝票が見つかりません');
 
-  const record = { ...item, sigData, hasSig: true, signedAt: new Date().toISOString() };
-  const records = getRecords(); records.unshift(record); saveRecords(records);
-  saveQueue(queue.filter(q => q.id !== signingQueueId));
+    await sbFetch('records', 'POST', {
+      id: item.id,
+      user_id: currentUser.id,
+      project: item.project, site: item.site, staff: item.staff,
+      date: item.date, hours: item.hours, note: item.note,
+      sig_data: sigData, has_sig: true,
+      signed_at: new Date().toISOString()
+    });
+    await sbFetch('sign_queue', 'DELETE', null, `?id=eq.${signingQueueId}&user_id=eq.${currentUser.id}`);
 
-  generatePDF(record, true);
-  closeSignOverlay();
-  updateHome();
-  showToast('サイン完了！PDFをダウンロードしています...');
-  switchScreen('list');
+    // PDF生成（非同期対応に変更）
+    await generatePDF({ ...item, sig_data: sigData, has_sig: true, signed_at: new Date().toISOString() }, true);
+    
+    hideLoading();
+    closeSignOverlay();
+    await updateHome();
+    showToast('サイン完了！PDFをダウンロードしました');
+    await switchScreen('list');
+  } catch(e) { hideLoading(); showToast('エラー：' + e.message); }
 }
 
-// ════════════ PDF ════════════
-function generatePDF(r, download) {
+// ════════════ PDF GENERATION（文字化け・レイアウトの完全修正箇所） ════════════
+async function generatePDF(r, download) {
+  // 一時的に画面外に美麗なPDF用のHTML要素を組み立てる
+  const container = document.createElement('div');
+  container.style.cssText = 'width:760px; padding:40px; background:#ffffff; color:#1a1917; font-family:sans-serif; position:fixed; top:-9999px; left:0; line-height:1.6;';
+  
+  const s = getSettings();
+  const title = r.has_sig ? '作業完了伝票' : '作業完了伝票（控え・未サイン）';
+  
+  container.innerHTML = `
+    <div style="background:#1a1917; color:#ffffff; padding:24px; display:flex; justify-content:space-between; align-items:center; border-radius:6px;">
+      <h1 style="margin:0; font-size:26px; font-weight:bold; letter-spacing:1px;">${title}</h1>
+      <span style="font-size:14px; font-weight:bold; letter-spacing:0.5px;">AXIA Sign</span>
+    </div>
+    
+    <div style="margin-top:25px; font-size:13px; color:#6b6963; display:flex; justify-content:space-between; padding:0 4px;">
+      <div>発行日時：${new Date(r.signed_at || r.created_at || Date.now()).toLocaleString('ja-JP')}</div>
+      <div>伝票番号：${r.id || '—'}</div>
+    </div>
+    
+    <table style="width:100%; border-collapse:collapse; margin-top:20px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+      ${[
+        ['案件名', r.project],
+        ['現場名', r.site],
+        ['スタッフ名', r.staff],
+        ['稼働日', r.date],
+        ['稼働時間', (r.hours || '') + ' 時間'],
+        ['備考', r.note || '—']
+      ].map(([label, val], i) => `
+        <tr style="background:${i % 2 === 0 ? '#f9f8f6' : '#ffffff'};">
+          <td style="padding:16px; font-size:14px; color:#6b6963; width:160px; border-bottom:1px solid #e8e7e3; font-weight:500;">${label}</td>
+          <td style="padding:16px; font-size:16px; font-weight:bold; border-bottom:1px solid #e8e7e3; color:#1a1917;">${val || '—'}</td>
+        </tr>
+      `).join('')}
+    </table>
+    
+    <div style="margin-top:35px;">
+      <div style="font-size:14px; font-weight:600; color:#6b6963; margin-bottom:10px; padding-left:4px;">お客様ご確認サイン</div>
+      <div style="border:1px dashed #c8c7c3; border-radius:8px; height:180px; display:flex; align-items:center; justify-content:center; background:#fafafa; overflow:hidden;">
+        ${r.sig_data || r.sigData ? 
+          `<img src="${r.sig_data || r.sigData}" style="max-width:95%; max-height:95%; object-fit:contain; filter: multiply(1.2);">` : 
+          '<span style="color:#9e9b95; font-size:14px;">サイン受領なし</span>'}
+      </div>
+    </div>
+    
+    <div style="margin-top:50px; border-top:1px solid #e8e7e3; padding-top:20px; display:flex; justify-content:space-between; align-items:center; font-size:13px; color:#9e9b95; padding-left:4px; padding-right:4px;">
+      <div style="font-weight:bold; color:#6b6963;">${s.company || 'AXIA Sign'}</div>
+      <div>本書は電子伝票システム(AXIA Sign)により自動発行されました。</div>
+    </div>
+  `;
+  
+  document.body.appendChild(container);
+  
+  // html2canvasでHTMLを高解像度の画像に変換（日本語文字化けの根本解決）
+  const canvas = await html2canvas(container, { 
+    scale: 2, 
+    useCORS: true,
+    backgroundColor: '#ffffff'
+  });
+  document.body.removeChild(container);
+  
+  const imgData = canvas.toDataURL('image/jpeg', 0.95);
+  
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF({ unit: 'mm', format: 'a4' });
-  const W = 210, M = 20;
-
-  doc.setFillColor(26, 25, 23);
-  doc.rect(0, 0, W, 32, 'F');
-  doc.setTextColor(255,255,255);
-  doc.setFontSize(18); doc.setFont('helvetica','bold');
-  doc.text('作業完了伝票', M, 19);
-  doc.setFontSize(9); doc.setFont('helvetica','normal');
-  doc.text('AXIA Sign — SERVICE COMPLETION SLIP', W - M, 19, { align: 'right' });
-
-  doc.setTextColor(120,118,110); doc.setFontSize(8);
-  doc.text('発行日時：' + new Date(r.signedAt || r.createdAt || Date.now()).toLocaleString('ja-JP'), M, 40);
-  if (r.id) doc.text('伝票番号：' + r.id, W - M, 40, { align: 'right' });
-
-  const fields = [
-    ['案件名', r.project||''], ['現場名', r.site||''], ['スタッフ名', r.staff||''],
-    ['稼働日', r.date||''], ['稼働時間', (r.hours||'') + ' 時間'],
-  ];
-  if (r.note) fields.push(['備考', r.note]);
-
-  let y = 50;
-  fields.forEach(([label, val], i) => {
-    const bg = i % 2 === 0 ? [250,249,246] : [244,243,240];
-    doc.setFillColor(...bg); doc.rect(M, y - 4, W - M * 2, 12, 'F');
-    doc.setTextColor(120,118,110); doc.setFontSize(8); doc.setFont('helvetica','normal');
-    doc.text(label, M + 3, y + 2);
-    doc.setTextColor(26,25,23); doc.setFontSize(11); doc.setFont('helvetica','bold');
-    doc.text(val || '—', M + 52, y + 2);
-    y += 14;
-  });
-
-  y += 4;
-  doc.setTextColor(120,118,110); doc.setFontSize(9); doc.setFont('helvetica','normal');
-  doc.text('お客様サイン', M, y); y += 4;
-  const sigH = 45;
-  doc.setDrawColor(200,198,190); doc.setLineWidth(0.3);
-  doc.rect(M, y, W - M * 2, sigH);
-  if (r.sigData) { try { doc.addImage(r.sigData, 'PNG', M + 2, y + 2, W - M * 2 - 4, sigH - 4); } catch(e){} }
-  else { doc.setTextColor(180,178,170); doc.setFontSize(10); doc.text('サインなし', W/2, y + sigH/2, { align:'center', baseline:'middle' }); }
-  y += sigH + 6;
-
-  doc.setDrawColor(220,218,210); doc.setLineWidth(0.3); doc.line(M, y, W - M, y); y += 5;
-  doc.setTextColor(160,158,150); doc.setFontSize(7.5);
-  const s = getSettings();
-  doc.text(s.company || 'AXIA Sign', M, y);
-  doc.text('本書は電子伝票システムにより発行されました', W - M, y, { align: 'right' });
-
-  if (download) { doc.save('denpo_' + (r.project||'untitled') + '_' + (r.date||'') + '.pdf'); return null; }
+  const imgWidth = 210; 
+  const imgHeight = (canvas.height * imgWidth) / canvas.width;
+  
+  doc.addImage(imgData, 'JPEG', 0, 0, imgWidth, imgHeight);
+  
+  if (download) {
+    doc.save('伝票_' + (r.project || '無題') + '_' + (r.date || '') + '.pdf');
+    return null;
+  }
   return doc.output('datauristring');
 }
 
@@ -1049,25 +1072,36 @@ function setFilter(f, el) {
   document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
   el.classList.add('active'); renderList();
 }
-function renderList() {
-  const query = (document.getElementById('search-input')?.value || '').toLowerCase();
-  const today = new Date().toISOString().split('T')[0];
-  const weekAgo = new Date(Date.now() - 7 * 86400000).toISOString().split('T')[0];
-  let records = getRecords();
-  if (query) records = records.filter(r =>
-    (r.project||'').toLowerCase().includes(query) ||
-    (r.site||'').toLowerCase().includes(query) ||
-    (r.staff||'').toLowerCase().includes(query));
-  if (currentFilter === 'signed') records = records.filter(r => r.hasSig);
-  if (currentFilter === 'today') records = records.filter(r => r.date === today);
-  if (currentFilter === 'week') records = records.filter(r => r.date >= weekAgo);
+
+async function renderList() {
   const container = document.getElementById('list-container');
-  if (!records.length) {
-    container.innerHTML = '<div class="empty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg><div class="empty-title">伝票が見つかりません</div><div class="empty-sub">条件を変えて検索してみてください</div></div>';
-  } else { container.innerHTML = records.map(r => recordHTML(r)).join(''); }
+  container.innerHTML = '<div class="empty" style="padding:2rem 1rem;color:var(--text3)">読み込み中...</div>';
+  try {
+    const query = (document.getElementById('search-input')?.value || '').toLowerCase();
+    const today = new Date().toISOString().split('T')[0];
+    const weekAgo = new Date(Date.now() - 7 * 86400000).toISOString().split('T')[0];
+
+    let qs = `?user_id=eq.${currentUser.id}&order=created_at.desc`;
+    if (currentFilter === 'signed') qs += '&has_sig=eq.true';
+    if (currentFilter === 'today') qs += `&date=eq.${today}`;
+    if (currentFilter === 'week') qs += `&date=gte.${weekAgo}`;
+
+    let records = await sbFetch('records', 'GET', null, qs);
+    if (query) records = records.filter(r =>
+      (r.project||'').toLowerCase().includes(query) ||
+      (r.site||'').toLowerCase().includes(query) ||
+      (r.staff||'').toLowerCase().includes(query));
+
+    if (!records.length) {
+      container.innerHTML = '<div class="empty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg><div class="empty-title">伝票が見つかりません</div><div class="empty-sub">条件を変えて検索してみてください</div></div>';
+    } else {
+      container.innerHTML = records.map(r => recordHTML(r)).join('');
+    }
+  } catch(e) { container.innerHTML = '<div class="empty">読み込みに失敗しました</div>'; }
 }
+
 function recordHTML(r) {
-  const badge = r.hasSig
+  const badge = r.has_sig
     ? '<span class="badge badge-green">サイン済み</span>'
     : '<span class="badge badge-gray">サインなし</span>';
   return `
@@ -1085,50 +1119,70 @@ function recordHTML(r) {
       </div>
     </div>`;
 }
-function downloadRecord(id) {
-  const r = getRecords().find(x => x.id === id);
-  if (r) { generatePDF(r, true); showToast('PDFをダウンロードしています...'); }
+
+async function downloadRecord(id) {
+  showLoading('PDFを生成中...');
+  try {
+    const rows = await sbFetch('records', 'GET', null, `?id=eq.${id}&user_id=eq.${currentUser.id}`);
+    if (rows[0]) { 
+      await generatePDF(rows[0], true); 
+      hideLoading();
+      showToast('PDFをダウンロードしました'); 
+    } else {
+      hideLoading();
+      showToast('伝票データが見つかりません');
+    }
+  } catch(e) { hideLoading(); showToast('エラー：' + e.message); }
 }
-function deleteRecord(id) {
+
+async function deleteRecord(id) {
   if (!confirm('この伝票を削除しますか？')) return;
-  saveRecords(getRecords().filter(r => r.id !== id));
-  renderList(); updateHome(); showToast('削除しました');
+  try {
+    await sbFetch('records', 'DELETE', null, `?id=eq.${id}&user_id=eq.${currentUser.id}`);
+    await renderList(); await updateHome(); showToast('削除しました');
+  } catch(e) { showToast('エラー：' + e.message); }
 }
 
 // ════════════ DETAIL MODAL ════════════
-function openDetail(id) {
+async function openDetail(id) {
   currentDetailId = id;
-  const r = getRecords().find(x => x.id === id);
-  if (!r) return;
-  document.getElementById('detail-title').textContent = r.project || '（無題）';
-  const rows = [
-    ['現場名', r.site], ['スタッフ', r.staff], ['稼働日', r.date],
-    ['稼働時間', (r.hours||'') + ' 時間'], ['備考', r.note || '—'],
-    ['サイン', r.hasSig ? 'あり' : 'なし'], ['作成日時', new Date(r.createdAt).toLocaleString('ja-JP')],
-  ];
-  document.getElementById('detail-body').innerHTML = `
-    <div style="border:0.5px solid var(--border);border-radius:var(--radius);overflow:hidden;margin-bottom:1rem">
-      ${rows.map(([l,v],i) => `<div style="display:flex;padding:10px 14px;background:${i%2===0?'var(--surface2)':'var(--surface)'}">
-        <span style="font-size:12px;color:var(--text2);width:80px;flex-shrink:0">${l}</span>
-        <span style="font-size:13px;font-weight:500">${v||'—'}</span>
-      </div>`).join('')}
-    </div>
-    ${r.sigData ? `<div style="border:0.5px solid var(--border);border-radius:var(--radius);padding:8px;margin-bottom:1rem"><img src="${r.sigData}" style="width:100%;height:80px;object-fit:contain"></div>` : ''}`;
-  document.getElementById('detail-actions').innerHTML = `
-    <button class="btn btn-ghost" style="flex:1" onclick="closeModal('detail-modal')">閉じる</button>
-    <button class="btn btn-ghost" style="flex:1" onclick="openEmailModal(${id});closeModal('detail-modal')">メール</button>
-    <button class="btn btn-primary" style="flex:1" onclick="downloadRecord(${id});closeModal('detail-modal')">PDF</button>`;
-  document.getElementById('detail-modal').classList.add('open');
+  try {
+    const rows = await sbFetch('records', 'GET', null, `?id=eq.${id}&user_id=eq.${currentUser.id}`);
+    const r = rows[0]; if (!r) return;
+    document.getElementById('detail-title').textContent = r.project || '（無題）';
+    const rowsData = [
+      ['現場名', r.site], ['スタッフ', r.staff], ['稼働日', r.date],
+      ['稼働時間', (r.hours||'') + ' 時間'], ['備考', r.note || '—'],
+      ['サイン', r.has_sig ? 'あり' : 'なし'],
+      ['サイン日時', r.signed_at ? new Date(r.signed_at).toLocaleString('ja-JP') : '—'],
+      ['作成日時', new Date(r.created_at).toLocaleString('ja-JP')],
+    ];
+    document.getElementById('detail-body').innerHTML = `
+      <div style="border:0.5px solid var(--border);border-radius:var(--radius);overflow:hidden;margin-bottom:1rem">
+        ${rowsData.map(([l,v],i) => `<div style="display:flex;padding:10px 14px;background:${i%2===0?'var(--surface2)':'var(--surface)'}">
+          <span style="font-size:12px;color:var(--text2);width:90px;flex-shrink:0">${l}</span>
+          <span style="font-size:13px;font-weight:500">${v||'—'}</span>
+        </div>`).join('')}
+      </div>
+      ${r.sig_data ? `<div style="border:0.5px solid var(--border);border-radius:var(--radius);padding:8px;margin-bottom:1rem"><img src="${r.sig_data}" style="width:100%;height:80px;object-fit:contain"></div>` : ''}`;
+    document.getElementById('detail-actions').innerHTML = `
+      <button class="btn btn-ghost" style="flex:1" onclick="closeModal('detail-modal')">閉じる</button>
+      <button class="btn btn-ghost" style="flex:1" onclick="openEmailModal(${id});closeModal('detail-modal')">メール</button>
+      <button class="btn btn-primary" style="flex:1" onclick="downloadRecord(${id});closeModal('detail-modal')">PDF</button>`;
+    document.getElementById('detail-modal').classList.add('open');
+  } catch(e) { showToast('エラー：' + e.message); }
 }
 
 // ════════════ EMAIL MODAL ════════════
-function openEmailModal(id) {
+async function openEmailModal(id) {
   currentDetailId = id;
-  const r = getRecords().find(x => x.id === id);
-  if (!r) return;
-  document.getElementById('email-subject').value = `作業完了のご報告：${r.project}（${r.date}）`;
-  document.getElementById('email-body').value = `お世話になっております。\n${r.project}の作業が完了しましたので、完了伝票PDFをお送りします。\nご確認のほど、よろしくお願いいたします。`;
-  document.getElementById('email-modal').classList.add('open');
+  try {
+    const rows = await sbFetch('records', 'GET', null, `?id=eq.${id}&user_id=eq.${currentUser.id}`);
+    const r = rows[0]; if (!r) return;
+    document.getElementById('email-subject').value = `作業完了のご報告：${r.project}（${r.date}）`;
+    document.getElementById('email-body').value = `お世話になっております。\n${r.project}の作業が完了しましたので、完了伝票PDFをお送りします。\nご確認のほど、よろしくお願いいたします。`;
+    document.getElementById('email-modal').classList.add('open');
+  } catch(e) {}
 }
 function sendEmail() {
   const to = document.getElementById('email-to').value.trim();
@@ -1143,17 +1197,55 @@ document.querySelectorAll('.modal-backdrop').forEach(b => {
 });
 
 // ════════════ DATA UTILS ════════════
-function exportData() {
-  const data = { records: getRecords(), queue: getQueue(), settings: getSettings(), exportedAt: new Date().toISOString() };
-  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-  const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
-  a.download = 'denpo_export_' + new Date().toISOString().split('T')[0] + '.json'; a.click();
-  showToast('エクスポートしました');
+async function exportData() {
+  showLoading('エクスポート中...');
+  try {
+    const [records, queue] = await Promise.all([
+      sbFetch('records', 'GET', null, `?user_id=eq.${currentUser.id}&order=created_at.desc`),
+      sbFetch('sign_queue', 'GET', null, `?user_id=eq.${currentUser.id}&order=created_at.desc`)
+    ]);
+    const data = { records, queue, settings: getSettings(), exportedAt: new Date().toISOString() };
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+    a.download = 'axia_export_' + new Date().toISOString().split('T')[0] + '.json'; a.click();
+    hideLoading(); showToast('エクスポートしました');
+  } catch(e) { hideLoading(); showToast('エラー：' + e.message); }
 }
-function clearAllData() {
+async function clearAllData() {
   if (!confirm('すべてのデータを削除しますか？\nこの操作は取り消せません。')) return;
-  localStorage.removeItem('denpo_v1_records'); localStorage.removeItem('denpo_v1_queue');
-  updateHome(); renderList(); showToast('データを削除しました');
+  showLoading('削除中...');
+  try {
+    await sbFetch('records', 'DELETE', null, `?user_id=eq.${currentUser.id}`);
+    await sbFetch('sign_queue', 'DELETE', null, `?user_id=eq.${currentUser.id}`);
+    hideLoading(); await updateHome(); await renderList(); showToast('データを削除しました');
+  } catch(e) { hideLoading(); showToast('エラー：' + e.message); }
+}
+
+// ════════════ LOADING ════════════
+function showLoading(msg = '処理中...') {
+  let el = document.getElementById('loading-overlay');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'loading-overlay';
+    el.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.35);z-index:400;display:flex;align-items:center;justify-content:center;';
+    el.innerHTML = `<div style="background:var(--surface);border-radius:var(--radius-lg);padding:20px 28px;display:flex;align-items:center;gap:14px;box-shadow:var(--shadow);">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--text2)" stroke-width="2" style="animation:spin 0.8s linear infinite"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
+      <span id="loading-msg" style="font-size:14px;font-weight:500;color:var(--text)">${msg}</span>
+    </div>`;
+    document.body.appendChild(el);
+    if (!document.getElementById('spin-style')) {
+      const s = document.createElement('style'); s.id='spin-style';
+      s.textContent = '@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}';
+      document.head.appendChild(s);
+    }
+  } else {
+    document.getElementById('loading-msg').textContent = msg;
+    el.style.display = 'flex';
+  }
+}
+function hideLoading() {
+  const el = document.getElementById('loading-overlay');
+  if (el) el.style.display = 'none';
 }
 
 // ════════════ TOAST ════════════
@@ -1166,579 +1258,6 @@ function showToast(msg) {
 // ════════════ BOOT ════════════
 const savedUser = localStorage.getItem('denpo_v1_user');
 if (savedUser) { try { currentUser = JSON.parse(savedUser); enterApp(); } catch {} }
-</script>
-
-</body>
-</html>
-
-function getSettings() {
-  try { return JSON.parse(localStorage.getItem('denpo_v1_settings') || '{}'); } catch { return {}; }
-}
-function saveSettingsData(s) { localStorage.setItem('denpo_v1_settings', JSON.stringify(s)); }
-
-// ════════════ AUTH ════════════
-function switchAuthTab(tab) {
-  document.querySelectorAll('.auth-tab').forEach((t,i) => t.classList.toggle('active', ['login','signup'][i] === tab));
-  document.getElementById('login-form').style.display = tab === 'login' ? '' : 'none';
-  document.getElementById('signup-form').style.display = tab === 'signup' ? '' : 'none';
-}
-
-function doLogin() {
-  const email = document.getElementById('login-email').value.trim();
-  const pass = document.getElementById('login-password').value;
-  if (!email || !pass) { showToast('メールとパスワードを入力してください'); return; }
-  currentUser = { email, name: email.split('@')[0] };
-  localStorage.setItem('denpo_v1_user', JSON.stringify(currentUser));
-  enterApp();
-}
-
-function doSignup() {
-  const company = document.getElementById('signup-company').value.trim();
-  const name = document.getElementById('signup-name').value.trim();
-  const email = document.getElementById('signup-email').value.trim();
-  const pass = document.getElementById('signup-password').value;
-  if (!company || !name || !email || !pass) { showToast('すべての項目を入力してください'); return; }
-  currentUser = { email, name, company };
-  localStorage.setItem('denpo_v1_user', JSON.stringify(currentUser));
-  const s = getSettings();
-  s.company = company;
-  s.defaultStaff = name;
-  saveSettingsData(s);
-  enterApp();
-}
-
-function doLogout() {
-  localStorage.removeItem('denpo_v1_user');
-  currentUser = null;
-  document.getElementById('auth-screen').style.display = 'flex';
-  document.getElementById('app').style.display = 'none';
-}
-
-function enterApp() {
-  document.getElementById('auth-screen').style.display = 'none';
-  document.getElementById('app').style.display = 'flex';
-  document.getElementById('user-label').textContent = currentUser.name;
-  initSignPad();
-  setDefaults();
-  loadSettings();
-  updateHome();
-  setGreeting();
-}
-
-function setGreeting() {
-  const h = new Date().getHours();
-  const g = h < 12 ? 'おはようございます' : h < 18 ? 'こんにちは' : 'お疲れ様です';
-  document.getElementById('home-greeting').textContent = g + '、' + (currentUser.name || '') + 'さん';
-}
-
-// ════════════ SIGN PAD ════════════
-let signCtx, signCanvas, drawing = false, lastX = 0, lastY = 0;
-
-function initSignPad() {
-  signCanvas = document.getElementById('signPad');
-  signCtx = signCanvas.getContext('2d');
-  resizeSignPad();
-  window.addEventListener('resize', resizeSignPad);
-
-  function pos(e) {
-    const r = signCanvas.getBoundingClientRect();
-    const src = e.touches ? e.touches[0] : e;
-    return { x: (src.clientX - r.left) * (signCanvas.width / r.width), y: (src.clientY - r.top) * (signCanvas.height / r.height) };
-  }
-
-  signCanvas.addEventListener('mousedown', e => { drawing = true; const p = pos(e); lastX = p.x; lastY = p.y; });
-  signCanvas.addEventListener('mousemove', e => {
-    if (!drawing) return;
-    const p = pos(e);
-    signCtx.beginPath(); signCtx.moveTo(lastX, lastY); signCtx.lineTo(p.x, p.y); signCtx.stroke();
-    lastX = p.x; lastY = p.y;
-    markSigned();
-  });
-  signCanvas.addEventListener('mouseup', () => drawing = false);
-  signCanvas.addEventListener('mouseleave', () => drawing = false);
-
-  signCanvas.addEventListener('touchstart', e => { e.preventDefault(); drawing = true; const p = pos(e); lastX = p.x; lastY = p.y; }, { passive: false });
-  signCanvas.addEventListener('touchmove', e => {
-    e.preventDefault();
-    if (!drawing) return;
-    const p = pos(e);
-    signCtx.beginPath(); signCtx.moveTo(lastX, lastY); signCtx.lineTo(p.x, p.y); signCtx.stroke();
-    lastX = p.x; lastY = p.y;
-    markSigned();
-  }, { passive: false });
-  signCanvas.addEventListener('touchend', () => drawing = false);
-}
-
-function resizeSignPad() {
-  if (!signCanvas) return;
-  const dpr = window.devicePixelRatio || 1;
-  const rect = signCanvas.getBoundingClientRect();
-  signCanvas.width = rect.width * dpr;
-  signCanvas.height = 180 * dpr;
-  signCtx.scale(dpr, dpr);
-  signCtx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--text').trim() || '#1a1917';
-  signCtx.lineWidth = 2.5;
-  signCtx.lineCap = 'round';
-  signCtx.lineJoin = 'round';
-  signHasDraw = false;
-}
-
-function markSigned() {
-  signHasDraw = true;
-  document.getElementById('signHint').classList.add('hidden');
-}
-
-function clearSign() {
-  resizeSignPad();
-  document.getElementById('signHint').classList.remove('hidden');
-}
-
-// ════════════ STAFF MANAGEMENT ════════════
-function getStaffList() {
-  try { return JSON.parse(localStorage.getItem('denpo_v1_staff') || '[]'); } catch { return []; }
-}
-function saveStaffList(list) { localStorage.setItem('denpo_v1_staff', JSON.stringify(list)); }
-
-function addStaff() {
-  const input = document.getElementById('s-staff-input');
-  const name = input.value.trim();
-  if (!name) { showToast('スタッフ名を入力してください'); return; }
-  const list = getStaffList();
-  if (list.includes(name)) { showToast('すでに登録されています'); return; }
-  list.push(name);
-  saveStaffList(list);
-  input.value = '';
-  renderStaffSettings();
-  refreshStaffSelect();
-  showToast(name + ' を登録しました');
-}
-
-function deleteStaff(name) {
-  const list = getStaffList().filter(s => s !== name);
-  saveStaffList(list);
-  renderStaffSettings();
-  refreshStaffSelect();
-  showToast(name + ' を削除しました');
-}
-
-function renderStaffSettings() {
-  const list = getStaffList();
-  const el = document.getElementById('staff-list-settings');
-  if (!list.length) {
-    el.innerHTML = '<p style="font-size:13px;color:var(--text3);padding:4px 0">まだスタッフが登録されていません</p>';
-    return;
-  }
-  el.innerHTML = list.map(name => `
-    <div style="display:flex;align-items:center;justify-content:space-between;padding:9px 0;border-bottom:0.5px solid var(--border)">
-      <span style="font-size:14px">${name}</span>
-      <button class="icon-btn" onclick="deleteStaff('${name.replace(/'/g,"\\'")}')">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>
-      </button>
-    </div>`).join('');
-}
-
-function refreshStaffSelect() {
-  const list = getStaffList();
-  const sel = document.getElementById('f-staff-select');
-  if (!sel) return;
-  const prev = sel.value;
-  sel.innerHTML = '';
-  const newOpt = document.createElement('option');
-  newOpt.value = '__new__';
-  newOpt.textContent = '＋ 新規スタッフ（手入力）';
-  sel.appendChild(newOpt);
-  list.forEach(name => {
-    const opt = document.createElement('option');
-    opt.value = name;
-    opt.textContent = name;
-    sel.appendChild(opt);
-  });
-  if (prev && prev !== '__new__' && list.includes(prev)) sel.value = prev;
-  else if (list.length > 0) sel.value = list[0];
-  else sel.value = '__new__';
-  onStaffSelectChange();
-}
-
-function onStaffSelectChange() {
-  const sel = document.getElementById('f-staff-select');
-  const newInput = document.getElementById('f-staff-new');
-  if (sel.value === '__new__') {
-    newInput.style.display = '';
-    newInput.focus();
-  } else {
-    newInput.style.display = 'none';
-    newInput.value = '';
-  }
-}
-
-function getSelectedStaff() {
-  const sel = document.getElementById('f-staff-select');
-  if (sel.value === '__new__') {
-    return document.getElementById('f-staff-new').value.trim();
-  }
-  return sel.value;
-}
-
-// ════════════ FORM DEFAULTS ════════════
-function setDefaults() {
-  document.getElementById('f-date').value = new Date().toISOString().split('T')[0];
-  refreshStaffSelect();
-}
-
-function loadSettings() {
-  const s = getSettings();
-  if (s.company) document.getElementById('s-company').value = s.company;
-  if (s.sender) document.getElementById('s-sender').value = s.sender;
-  renderStaffSettings();
-}
-
-function saveSettings() {
-  const s = {
-    company: document.getElementById('s-company').value.trim(),
-    sender: document.getElementById('s-sender').value.trim()
-  };
-  saveSettingsData(s);
-  showToast('設定を保存しました');
-}
-
-// ════════════ SCREEN ROUTING ════════════
-function switchScreen(name) {
-  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-  document.getElementById('screen-' + name).classList.add('active');
-  document.getElementById('nav-' + name).classList.add('active');
-  if (name === 'home') updateHome();
-  if (name === 'list') renderList();
-  if (name === 'new') { setDefaults(); }
-  window.scrollTo(0, 0);
-}
-
-// ════════════ HOME ════════════
-function updateHome() {
-  const records = getRecords();
-  const today = new Date().toISOString().split('T')[0];
-  document.getElementById('stat-total').textContent = records.length;
-  document.getElementById('stat-today').textContent = records.filter(r => r.date === today).length;
-  document.getElementById('stat-signed').textContent = records.filter(r => r.hasSig).length;
-
-  const container = document.getElementById('home-recent');
-  const recent = records.slice(0, 3);
-  if (!recent.length) {
-    container.innerHTML = '<div class="empty" style="padding:2rem 1rem"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg><div class="empty-title">伝票がまだありません</div><div class="empty-sub">「新規作成」から始めましょう</div></div>';
-  } else {
-    container.innerHTML = recent.map(r => recordHTML(r)).join('');
-  }
-}
-
-// ════════════ SAVE / PDF ════════════
-function getFormData() {
-  return {
-    project: document.getElementById('f-project').value.trim(),
-    site: document.getElementById('f-site').value.trim(),
-    staff: getSelectedStaff(),
-    date: document.getElementById('f-date').value,
-    hours: document.getElementById('f-hours').value,
-    note: document.getElementById('f-note').value.trim()
-  };
-}
-
-function validate(d) {
-  if (!d.project) { showToast('案件名を入力してください'); return false; }
-  if (!d.site) { showToast('現場名を入力してください'); return false; }
-  if (!d.staff) { showToast('スタッフ名を入力してください'); return false; }
-  if (!d.date) { showToast('稼働日を入力してください'); return false; }
-  if (!d.hours) { showToast('稼働時間を入力してください'); return false; }
-  return true;
-}
-
-function saveDenpo() {
-  const d = getFormData();
-  if (!validate(d)) return;
-  const sigData = signHasDraw ? signCanvas.toDataURL('image/png') : null;
-  const record = { id: Date.now(), ...d, sigData, hasSig: !!sigData, createdAt: new Date().toISOString() };
-  const records = getRecords();
-  records.unshift(record);
-  saveRecords(records);
-  generatePDF(record, true);
-  showToast('保存しました。PDFをダウンロード中...');
-  // reset form
-  ['f-project','f-note'].forEach(id => document.getElementById(id).value = '');
-  document.getElementById('f-hours').value = '';
-  clearSign();
-  updateHome();
-}
-
-function previewPDF() {
-  const d = getFormData();
-  if (!validate(d)) return;
-  const sigData = signHasDraw ? signCanvas.toDataURL('image/png') : null;
-  const uri = generatePDF({ ...d, hasSig: !!sigData, sigData, createdAt: new Date().toISOString() }, false);
-  window.open(uri, '_blank');
-}
-
-function generatePDF(r, download) {
-  const { jsPDF } = window.jspdf;
-  const doc = new jsPDF({ unit: 'mm', format: 'a4' });
-  const W = 210, M = 20;
-
-  // Header bar
-  doc.setFillColor(26, 25, 23);
-  doc.rect(0, 0, W, 32, 'F');
-  doc.setTextColor(255,255,255);
-  doc.setFontSize(18); doc.setFont('helvetica','bold');
-  doc.text('作業完了伝票', M, 19);
-  doc.setFontSize(9); doc.setFont('helvetica','normal');
-  doc.text('AXIA Sign — SERVICE COMPLETION SLIP', W - M, 19, { align: 'right' });
-
-  // Meta
-  doc.setTextColor(120,118,110);
-  doc.setFontSize(8);
-  doc.text('発行日時：' + new Date(r.createdAt || Date.now()).toLocaleString('ja-JP'), M, 40);
-  if (r.id) doc.text('伝票番号：' + r.id, W - M, 40, { align: 'right' });
-
-  // Fields
-  const fields = [
-    ['案件名', r.project || r.projectName || ''],
-    ['現場名', r.site || r.siteName || ''],
-    ['スタッフ名', r.staff || r.staffName || ''],
-    ['稼働日', r.date || r.workDate || ''],
-    ['稼働時間', (r.hours || r.workHours || '') + ' 時間'],
-  ];
-  if (r.note) fields.push(['備考', r.note]);
-
-  let y = 50;
-  fields.forEach(([label, val], i) => {
-    const bg = i % 2 === 0 ? [250,249,246] : [244,243,240];
-    doc.setFillColor(...bg);
-    doc.rect(M, y - 4, W - M * 2, 12, 'F');
-    doc.setTextColor(120,118,110); doc.setFontSize(8); doc.setFont('helvetica','normal');
-    doc.text(label, M + 3, y + 2);
-    doc.setTextColor(26,25,23); doc.setFontSize(11); doc.setFont('helvetica','bold');
-    doc.text(val || '—', M + 52, y + 2);
-    y += 14;
-  });
-
-  // Signature box
-  y += 4;
-  doc.setTextColor(120,118,110); doc.setFontSize(9); doc.setFont('helvetica','normal');
-  doc.text('お客様サイン', M, y);
-  y += 4;
-
-  const sigH = 45;
-  doc.setDrawColor(200,198,190); doc.setLineWidth(0.3);
-  doc.rect(M, y, W - M * 2, sigH);
-
-  if (r.sigData) {
-    try { doc.addImage(r.sigData, 'PNG', M + 2, y + 2, W - M * 2 - 4, sigH - 4); } catch(e){}
-  } else {
-    doc.setTextColor(180,178,170); doc.setFontSize(10);
-    doc.text('サインなし', W / 2, y + sigH / 2, { align: 'center', baseline: 'middle' });
-  }
-  y += sigH + 6;
-
-  // Footer
-  doc.setDrawColor(220,218,210); doc.setLineWidth(0.3);
-  doc.line(M, y, W - M, y);
-  y += 5;
-  doc.setTextColor(160,158,150); doc.setFontSize(7.5);
-  const s = getSettings();
-  doc.text(s.company || 'でんぴょうシステム', M, y);
-  doc.text('本書は電子伝票システムにより発行されました', W - M, y, { align: 'right' });
-
-  if (download) {
-    doc.save('denpo_' + (r.project||r.projectName||'untitled') + '_' + (r.date||r.workDate||'') + '.pdf');
-    return null;
-  }
-  return doc.output('datauristring');
-}
-
-// ════════════ LIST ════════════
-function setFilter(f, el) {
-  currentFilter = f;
-  document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
-  el.classList.add('active');
-  renderList();
-}
-
-function renderList() {
-  const query = (document.getElementById('search-input')?.value || '').toLowerCase();
-  const today = new Date().toISOString().split('T')[0];
-  const weekAgo = new Date(Date.now() - 7 * 86400000).toISOString().split('T')[0];
-  let records = getRecords();
-
-  if (query) {
-    records = records.filter(r =>
-      (r.project||r.projectName||'').toLowerCase().includes(query) ||
-      (r.site||r.siteName||'').toLowerCase().includes(query) ||
-      (r.staff||r.staffName||'').toLowerCase().includes(query)
-    );
-  }
-  if (currentFilter === 'signed') records = records.filter(r => r.hasSig);
-  if (currentFilter === 'today') records = records.filter(r => (r.date||r.workDate) === today);
-  if (currentFilter === 'week') records = records.filter(r => (r.date||r.workDate) >= weekAgo);
-
-  const container = document.getElementById('list-container');
-  if (!records.length) {
-    container.innerHTML = '<div class="empty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg><div class="empty-title">伝票が見つかりません</div><div class="empty-sub">条件を変えて検索してみてください</div></div>';
-  } else {
-    container.innerHTML = records.map(r => recordHTML(r)).join('');
-  }
-}
-
-function recordHTML(r) {
-  const name = r.project || r.projectName || '（無題）';
-  const site = r.site || r.siteName || '';
-  const staff = r.staff || r.staffName || '';
-  const date = r.date || r.workDate || '';
-  const hours = r.hours || r.workHours || '';
-  const badge = r.hasSig
-    ? '<span class="badge badge-green">サイン済み</span>'
-    : '<span class="badge badge-gray">サインなし</span>';
-  return `
-    <div class="record-item">
-      <div class="record-icon">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-      </div>
-      <div class="record-body" onclick="openDetail(${r.id})" style="cursor:pointer">
-        <div class="record-name">${name}</div>
-        <div class="record-meta">${site} ／ ${staff} ／ ${date} ／ ${hours}h</div>
-        <div style="margin-top:4px">${badge}</div>
-      </div>
-      <div class="record-btns">
-        <button class="icon-btn" onclick="downloadRecord(${r.id})" title="PDF">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-        </button>
-        <button class="icon-btn" onclick="openEmailModal(${r.id})" title="メール">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
-        </button>
-        <button class="icon-btn" onclick="deleteRecord(${r.id})" title="削除">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
-        </button>
-      </div>
-    </div>`;
-}
-
-function downloadRecord(id) {
-  const r = getRecords().find(x => x.id === id);
-  if (r) { generatePDF(r, true); showToast('PDFをダウンロードしています...'); }
-}
-
-function deleteRecord(id) {
-  if (!confirm('この伝票を削除しますか？')) return;
-  saveRecords(getRecords().filter(r => r.id !== id));
-  renderList();
-  updateHome();
-  showToast('削除しました');
-}
-
-// ════════════ DETAIL MODAL ════════════
-function openDetail(id) {
-  currentDetailId = id;
-  const r = getRecords().find(x => x.id === id);
-  if (!r) return;
-  const name = r.project || r.projectName || '（無題）';
-  document.getElementById('detail-title').textContent = name;
-
-  const rows = [
-    ['現場名', r.site || r.siteName],
-    ['スタッフ', r.staff || r.staffName],
-    ['稼働日', r.date || r.workDate],
-    ['稼働時間', (r.hours || r.workHours) + ' 時間'],
-    ['備考', r.note || '—'],
-    ['サイン', r.hasSig ? 'あり' : 'なし'],
-    ['作成日時', new Date(r.createdAt).toLocaleString('ja-JP')],
-  ];
-
-  document.getElementById('detail-body').innerHTML = `
-    <div style="border:0.5px solid var(--border);border-radius:var(--radius);overflow:hidden;margin-bottom:1rem">
-      ${rows.map(([l,v],i) => `
-        <div style="display:flex;padding:10px 14px;background:${i%2===0?'var(--surface2)':'var(--surface)'}">
-          <span style="font-size:12px;color:var(--text2);width:80px;flex-shrink:0">${l}</span>
-          <span style="font-size:13px;font-weight:500">${v || '—'}</span>
-        </div>`).join('')}
-    </div>
-    ${r.sigData ? `<div style="border:0.5px solid var(--border);border-radius:var(--radius);padding:8px;margin-bottom:1rem"><img src="${r.sigData}" style="width:100%;height:80px;object-fit:contain"></div>` : ''}
-  `;
-
-  document.getElementById('detail-actions').innerHTML = `
-    <button class="btn btn-ghost" style="flex:1" onclick="closeModal('detail-modal')">閉じる</button>
-    <button class="btn btn-ghost" style="flex:1" onclick="openEmailModal(${id});closeModal('detail-modal')">
-      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
-      メール
-    </button>
-    <button class="btn btn-primary" style="flex:1" onclick="downloadRecord(${id});closeModal('detail-modal')">
-      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-      PDF
-    </button>
-  `;
-  document.getElementById('detail-modal').classList.add('open');
-}
-
-// ════════════ EMAIL MODAL ════════════
-function openEmailModal(id) {
-  currentDetailId = id;
-  const r = getRecords().find(x => x.id === id);
-  if (!r) return;
-  const name = r.project || r.projectName || '';
-  const date = r.date || r.workDate || '';
-  document.getElementById('email-subject').value = `作業完了のご報告：${name}（${date}）`;
-  document.getElementById('email-body').value = `お世話になっております。\n${name}の作業が完了しましたので、完了伝票PDFをお送りします。\nご確認のほど、よろしくお願いいたします。`;
-  document.getElementById('email-modal').classList.add('open');
-}
-
-function sendEmail() {
-  const to = document.getElementById('email-to').value.trim();
-  if (!to) { showToast('送信先メールアドレスを入力してください'); return; }
-  // デモ：実際はResend/SendGrid APIを叩く
-  closeModal('email-modal');
-  showToast('送信しました（デモモード）');
-  document.getElementById('email-to').value = '';
-}
-
-function closeModal(id) {
-  document.getElementById(id).classList.remove('open');
-}
-
-// Close modal on backdrop click
-document.querySelectorAll('.modal-backdrop').forEach(b => {
-  b.addEventListener('click', e => { if (e.target === b) b.classList.remove('open'); });
-});
-
-// ════════════ DATA UTILS ════════════
-function exportData() {
-  const data = { records: getRecords(), settings: getSettings(), exportedAt: new Date().toISOString() };
-  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = 'denpo_export_' + new Date().toISOString().split('T')[0] + '.json';
-  a.click();
-  showToast('エクスポートしました');
-}
-
-function clearAllData() {
-  if (!confirm('すべてのデータを削除しますか？\nこの操作は取り消せません。')) return;
-  localStorage.removeItem('denpo_v1_records');
-  updateHome();
-  renderList();
-  showToast('データを削除しました');
-}
-
-// ════════════ TOAST ════════════
-function showToast(msg) {
-  const t = document.getElementById('toast');
-  t.textContent = msg;
-  t.classList.add('show');
-  setTimeout(() => t.classList.remove('show'), 2800);
-}
-
-// ════════════ BOOT ════════════
-const savedUser = localStorage.getItem('denpo_v1_user');
-if (savedUser) {
-  try {
-    currentUser = JSON.parse(savedUser);
-    enterApp();
-  } catch { }
-}
 </script>
 </body>
 </html>
