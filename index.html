@@ -197,8 +197,19 @@
     </div>
 
     <div id="signup-form" style="display:none">
+      <!-- 招待コード入力欄（任意）-->
+      <div style="background:var(--blue-bg);border-radius:var(--radius);padding:11px 14px;margin-bottom:14px;font-size:13px;color:var(--blue-text);line-height:1.5;">
+        会社のスタッフとして参加する場合は、管理者から招待コードをもらって入力してください。<br>新しく会社を登録する場合は空欄のままでOKです。
+      </div>
       <div class="field">
-        <label>会社名</label>
+        <label>招待コード（スタッフ参加の場合）</label>
+        <input type="text" id="signup-invite" placeholder="例：AX-123456" autocomplete="off"
+          style="letter-spacing:0.1em;text-transform:uppercase"
+          oninput="onInviteInput(this)">
+        <div id="invite-status" style="font-size:12px;margin-top:4px;min-height:18px"></div>
+      </div>
+      <div id="signup-company-wrap" class="field">
+        <label>会社名 <span style="color:var(--text3);font-weight:400">（招待コードがない場合のみ）</span></label>
         <input type="text" id="signup-company" placeholder="株式会社〇〇">
       </div>
       <div class="field">
@@ -337,15 +348,38 @@
 
       <div class="card">
         <div class="card-title">会社情報</div>
-        <div class="field">
-          <label>会社名</label>
-          <input type="text" id="s-company" placeholder="株式会社〇〇">
+        <div class="setting-row">
+          <div><div class="setting-label">会社名</div><div class="setting-sub" id="s-company-name">—</div></div>
         </div>
-        <div class="field">
-          <label>メール送信者名</label>
-          <input type="text" id="s-sender" placeholder="でんぴょうシステム">
+        <div class="setting-row">
+          <div><div class="setting-label">会社ID</div><div class="setting-sub" id="s-company-id" style="font-family:monospace;font-size:11px">—</div></div>
+        </div>
+        <div class="setting-row">
+          <div><div class="setting-label">メール送信者名</div></div>
+          <input type="text" id="s-sender" placeholder="AXIA Sign" style="width:140px;text-align:right">
         </div>
         <button class="btn btn-ghost btn-sm" onclick="saveSettings()" style="margin-top:4px">設定を保存</button>
+      </div>
+
+      <div class="card">
+        <div class="card-title">スタッフ招待</div>
+        <p style="font-size:13px;color:var(--text2);margin-bottom:14px;line-height:1.6;">招待コードを発行して、同じ会社のスタッフに共有してください。スタッフは新規登録時にこのコードを入力すると、同じ会社データに紐付けられます。</p>
+        <div id="invite-code-display" style="display:none;margin-bottom:12px;">
+          <div style="background:var(--surface2);border-radius:var(--radius);padding:14px;text-align:center;margin-bottom:8px;">
+            <div style="font-size:11px;color:var(--text2);margin-bottom:6px;">招待コード</div>
+            <div id="invite-code-value" style="font-size:26px;font-weight:700;letter-spacing:0.15em;color:var(--text);font-family:monospace;"></div>
+            <div id="invite-code-expiry" style="font-size:11px;color:var(--text3);margin-top:6px;"></div>
+          </div>
+          <button class="btn btn-ghost btn-sm" style="width:100%" onclick="copyInviteCode()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+            コードをコピー
+          </button>
+        </div>
+        <button class="btn btn-primary" onclick="generateInviteCode()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          招待コードを発行する
+        </button>
+        <p style="font-size:11px;color:var(--text3);margin-top:8px;">※ コードの有効期限は7日間です</p>
       </div>
 
       <div class="card">
@@ -537,15 +571,14 @@ async function sbFetch(table, method = 'GET', body = null, query = '') {
       'apikey': SB_KEY,
       'Authorization': 'Bearer ' + SB_KEY,
       'Content-Type': 'application/json',
-      'Prefer': method === 'POST' ? 'return=representation' : ''
+      'Prefer': method === 'POST' ? 'return=representation' : method === 'PATCH' ? 'return=representation' : ''
     },
     body: body ? JSON.stringify(body) : null
   });
-  if (!res.ok) { 
-    // Supabaseからのエラーメッセージ（JSON）を解析してコンソールに強制出力
+  if (!res.ok) {
     const errData = await res.json().catch(() => ({}));
-    console.error('❌【Supabaseエラーの具体的な理由】:', errData);
-    throw new Error(errData.message || errData.details || 'リクエスト失敗'); 
+    console.error('❌【Supabaseエラー】:', errData);
+    throw new Error(errData.message || errData.details || 'リクエスト失敗');
   }
   if (method === 'DELETE' || res.status === 204) return null;
   return res.json();
@@ -582,26 +615,85 @@ async function doLogin() {
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error_description || data.msg || 'ログイン失敗');
-    currentUser = { id: data.user.id, email: data.user.email, name: data.user.user_metadata?.name || email.split('@')[0], token: data.access_token };
-    localStorage.setItem('denpo_v1_user', JSON.stringify(currentUser));
+    currentUser = { id: data.user.id, email: data.user.email, name: data.user.user_metadata?.name || email.split('@')[0], company: data.user.user_metadata?.company || '', company_id: data.user.user_metadata?.company_id || data.user.id, token: data.access_token };
+    localStorage.setItem('axia_user', JSON.stringify(currentUser));
     hideLoading();
     enterApp();
   } catch(e) { hideLoading(); showToast('エラー：' + e.message); }
 }
 
+// 招待コード入力時のリアルタイム確認
+let inviteDebounce = null;
+async function onInviteInput(el) {
+  const code = el.value.trim().toUpperCase();
+  const statusEl = document.getElementById('invite-status');
+  const companyWrap = document.getElementById('signup-company-wrap');
+  if (!code) {
+    statusEl.textContent = '';
+    companyWrap.style.display = '';
+    return;
+  }
+  clearTimeout(inviteDebounce);
+  inviteDebounce = setTimeout(async () => {
+    statusEl.textContent = '確認中...';
+    statusEl.style.color = 'var(--text3)';
+    try {
+      const rows = await sbFetch('invite_codes', 'GET', null,
+        `?code=eq.${encodeURIComponent(code)}&expires_at=gte.${new Date().toISOString()}`);
+      if (rows && rows.length > 0) {
+        statusEl.textContent = '✓ ' + rows[0].company_name + ' の招待コードです';
+        statusEl.style.color = 'var(--green-text)';
+        companyWrap.style.display = 'none';
+      } else {
+        statusEl.textContent = '✗ 無効または期限切れのコードです';
+        statusEl.style.color = 'var(--red-text)';
+        companyWrap.style.display = '';
+      }
+    } catch(e) {
+      statusEl.textContent = '確認できませんでした';
+      statusEl.style.color = 'var(--text3)';
+      companyWrap.style.display = '';
+    }
+  }, 500);
+}
+
 async function doSignup() {
-  const company = document.getElementById('signup-company').value.trim();
-  const name = document.getElementById('signup-name').value.trim();
-  const email = document.getElementById('signup-email').value.trim();
-  const pass = document.getElementById('signup-password').value;
-  if (!company || !name || !email || !pass) { showToast('すべての項目を入力してください'); return; }
+  const inviteCode = (document.getElementById('signup-invite')?.value || '').trim().toUpperCase();
+  const company    = document.getElementById('signup-company').value.trim();
+  const name       = document.getElementById('signup-name').value.trim();
+  const email      = document.getElementById('signup-email').value.trim();
+  const pass       = document.getElementById('signup-password').value;
+
+  if (!name || !email || !pass) { showToast('お名前・メール・パスワードを入力してください'); return; }
   if (pass.length < 6) { showToast('パスワードは6文字以上にしてください'); return; }
+
   showLoading('アカウント作成中...');
   try {
+    let company_id, company_name;
+
+    if (inviteCode) {
+      // 招待コードで既存の会社に参加
+      const rows = await sbFetch('invite_codes', 'GET', null,
+        `?code=eq.${encodeURIComponent(inviteCode)}&expires_at=gte.${new Date().toISOString()}`);
+      if (!rows || rows.length === 0) {
+        hideLoading(); showToast('招待コードが無効または期限切れです'); return;
+      }
+      company_id   = rows[0].company_id;
+      company_name = rows[0].company_name;
+      // 使用カウントを更新
+      await sbFetch('invite_codes', 'PATCH', { used_count: (rows[0].used_count || 0) + 1 },
+        `?code=eq.${encodeURIComponent(inviteCode)}`);
+    } else {
+      // 新規会社として登録
+      if (!company) { hideLoading(); showToast('会社名を入力してください'); return; }
+      company_id   = 'co_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
+      company_name = company;
+    }
+
     const res = await fetch(`${SB_URL}/auth/v1/signup`, {
       method: 'POST',
       headers: { 'apikey': SB_KEY, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password: pass, data: { name, company } })
+      body: JSON.stringify({ email, password: pass, data: { name, company: company_name, company_id } })
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error_description || data.msg || '登録失敗');
@@ -610,6 +702,43 @@ async function doSignup() {
     switchAuthTab('login');
     document.getElementById('login-email').value = email;
   } catch(e) { hideLoading(); showToast('エラー：' + e.message); }
+}
+
+// 招待コード発行
+async function generateInviteCode() {
+  showLoading('招待コードを発行中...');
+  try {
+    // AX-XXXXXX 形式のコードを生成
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    let code = 'AX-';
+    for (let i = 0; i < 6; i++) code += chars[Math.floor(Math.random() * chars.length)];
+
+    const expires = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+    await sbFetch('invite_codes', 'POST', {
+      code,
+      company_id:   currentUser.company_id,
+      company_name: currentUser.company,
+      created_by:   currentUser.id,
+      expires_at:   expires
+    });
+
+    document.getElementById('invite-code-value').textContent = code;
+    document.getElementById('invite-code-expiry').textContent =
+      '有効期限：' + new Date(expires).toLocaleDateString('ja-JP');
+    document.getElementById('invite-code-display').style.display = '';
+    hideLoading();
+    showToast('招待コードを発行しました');
+  } catch(e) { hideLoading(); showToast('エラー：' + e.message); }
+}
+
+async function copyInviteCode() {
+  const code = document.getElementById('invite-code-value').textContent;
+  try {
+    await navigator.clipboard.writeText(code);
+    showToast('コードをコピーしました：' + code);
+  } catch(e) {
+    showToast('コード：' + code + '（手動でコピーしてください）');
+  }
 }
 
 async function doLogout() {
@@ -623,7 +752,7 @@ async function doLogout() {
     // サーバー側でエラーが起きてもスルーして次へ進む
   }
   // サーバーの成否に関わらず、ブラウザの記憶を確実に消去して戻す
-  localStorage.removeItem('denpo_v1_user');
+  localStorage.removeItem('axia_user');
   currentUser = null;
   document.getElementById('auth-screen').style.display = 'flex';
   document.getElementById('app').style.display = 'none';
@@ -635,6 +764,11 @@ async function enterApp() {
   document.getElementById('auth-screen').style.display = 'none';
   document.getElementById('app').style.display = 'flex';
   document.getElementById('user-label').textContent = currentUser.name;
+  // 設定画面の会社情報を表示
+  const nameEl = document.getElementById('s-company-name');
+  const idEl   = document.getElementById('s-company-id');
+  if (nameEl) nameEl.textContent = currentUser.company || '（未設定）';
+  if (idEl)   idEl.textContent   = currentUser.company_id || '—';
   initFullSignPad();
   setDefaults();
   loadSettings();
@@ -656,7 +790,7 @@ async function addStaff() {
   const name = input.value.trim();
   if (!name) { showToast('スタッフ名を入力してください'); return; }
   try {
-    await sbFetch('staff', 'POST', { user_id: currentUser.id, name });
+    await sbFetch('staff', 'POST', { user_id: currentUser.id, company_id: currentUser.company_id, name });
     input.value = '';
     await renderStaffSettings();
     await refreshStaffSelect();
@@ -666,7 +800,7 @@ async function addStaff() {
 
 async function deleteStaff(name) {
   try {
-    await sbFetch('staff', 'DELETE', null, `?user_id=eq.${currentUser.id}&name=eq.${encodeURIComponent(name)}`);
+    await sbFetch('staff', 'DELETE', null, `?company_id=eq.${currentUser.company_id}&name=eq.${encodeURIComponent(name)}`);
     await renderStaffSettings();
     await refreshStaffSelect();
     showToast(name + ' を削除しました');
@@ -675,7 +809,7 @@ async function deleteStaff(name) {
 
 async function fetchStaffList() {
   try {
-    const rows = await sbFetch('staff', 'GET', null, `?user_id=eq.${currentUser.id}&order=created_at.asc`);
+    const rows = await sbFetch('staff', 'GET', null, `?company_id=eq.${currentUser.company_id}&order=created_at.asc`);
     return (rows || []).map(r => r.name);
   } catch { return []; }
 }
@@ -727,12 +861,11 @@ async function setDefaults() {
 }
 function loadSettings() {
   const s = getSettings();
-  if (s.company) document.getElementById('s-company').value = s.company;
-  if (s.sender) document.getElementById('s-sender').value = s.sender;
+  if (s.sender) { const el = document.getElementById('s-sender'); if(el) el.value = s.sender; }
   renderStaffSettings();
 }
 function saveSettings() {
-  const s = { company: document.getElementById('s-company').value.trim(), sender: document.getElementById('s-sender').value.trim() };
+  const s = { sender: document.getElementById('s-sender').value.trim() };
   saveSettingsData(s); showToast('設定を保存しました');
 }
 
@@ -753,8 +886,8 @@ async function switchScreen(name) {
 async function updateHome() {
   try {
     const [records, queue] = await Promise.all([
-      sbFetch('records', 'GET', null, `?user_id=eq.${currentUser.id}&order=created_at.desc`),
-      sbFetch('sign_queue', 'GET', null, `?user_id=eq.${currentUser.id}&order=created_at.desc`)
+      sbFetch('records', 'GET', null, `?company_id=eq.${currentUser.company_id}&order=created_at.desc`),
+      sbFetch('sign_queue', 'GET', null, `?company_id=eq.${currentUser.company_id}&order=created_at.desc`)
     ]);
     const today = new Date().toISOString().split('T')[0];
     document.getElementById('stat-total').textContent = records.length;
@@ -802,13 +935,14 @@ async function sendToSignQueue() {
     const safeId = Math.floor(10000000 + Math.random() * 90000000);
 
     await sbFetch('sign_queue', 'POST', {
-      id: safeId, 
+      id: safeId,
       user_id: currentUser.id,
+      company_id: currentUser.company_id,
       project: d.project,
       site: d.site,
       staff: d.staff,
       date: d.date,
-      hours: parseFloat(d.hours), // 数値に変換
+      hours: parseFloat(d.hours),
       note: d.note
     });
     
@@ -840,7 +974,7 @@ async function renderQueue() {
   const container = document.getElementById('queue-container');
   container.innerHTML = '<div class="empty" style="padding:2rem 1rem;color:var(--text3)">読み込み中...</div>';
   try {
-    const queue = await sbFetch('sign_queue', 'GET', null, `?user_id=eq.${currentUser.id}&order=created_at.desc`);
+    const queue = await sbFetch('sign_queue', 'GET', null, `?company_id=eq.${currentUser.company_id}&order=created_at.desc`);
     if (!queue.length) {
       container.innerHTML = `<div class="empty">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 22C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10-4.477 10-10 10z"/><path d="M9 12l2 2 4-4"/></svg>
@@ -875,7 +1009,7 @@ async function renderQueue() {
 async function removeFromQueue(id) {
   if (!confirm('サイン待ちから削除しますか？')) return;
   try {
-    await sbFetch('sign_queue', 'DELETE', null, `?id=eq.${id}&user_id=eq.${currentUser.id}`);
+    await sbFetch('sign_queue', 'DELETE', null, `?id=eq.${id}&company_id=eq.${currentUser.company_id}`);
     await renderQueue(); await updateHome();
     showToast('削除しました');
   } catch(e) { showToast('エラー：' + e.message); }
@@ -885,7 +1019,7 @@ async function removeFromQueue(id) {
 async function openSignFlow(id) {
   signingQueueId = id;
   try {
-    const rows = await sbFetch('sign_queue', 'GET', null, `?id=eq.${id}&user_id=eq.${currentUser.id}`);
+    const rows = await sbFetch('sign_queue', 'GET', null, `?id=eq.${id}&company_id=eq.${currentUser.company_id}`);
     const item = rows[0];
     if (!item) { showToast('伝票が見つかりません'); return; }
     const fields = [
@@ -987,19 +1121,20 @@ async function completeSign() {
   const sigData = fsCanvas.toDataURL('image/png');
   showLoading('保存中...');
   try {
-    const rows = await sbFetch('sign_queue', 'GET', null, `?id=eq.${signingQueueId}&user_id=eq.${currentUser.id}`);
+    const rows = await sbFetch('sign_queue', 'GET', null, `?id=eq.${signingQueueId}&company_id=eq.${currentUser.company_id}`);
     const item = rows[0];
     if (!item) throw new Error('伝票が見つかりません');
 
     await sbFetch('records', 'POST', {
       id: item.id,
       user_id: currentUser.id,
+      company_id: currentUser.company_id,
       project: item.project, site: item.site, staff: item.staff,
       date: item.date, hours: item.hours, note: item.note,
       sig_data: sigData, has_sig: true,
       signed_at: new Date().toISOString()
     });
-    await sbFetch('sign_queue', 'DELETE', null, `?id=eq.${signingQueueId}&user_id=eq.${currentUser.id}`);
+    await sbFetch('sign_queue', 'DELETE', null, `?id=eq.${signingQueueId}&company_id=eq.${currentUser.company_id}`);
 
     // PDF生成（非同期対応に変更）
     await generatePDF({ ...item, sig_data: sigData, has_sig: true, signed_at: new Date().toISOString() }, true);
@@ -1104,7 +1239,7 @@ async function renderList() {
     const today = new Date().toISOString().split('T')[0];
     const weekAgo = new Date(Date.now() - 7 * 86400000).toISOString().split('T')[0];
 
-    let qs = `?user_id=eq.${currentUser.id}&order=created_at.desc`;
+    let qs = `?company_id=eq.${currentUser.company_id}&order=created_at.desc`;
     if (currentFilter === 'signed') qs += '&has_sig=eq.true';
     if (currentFilter === 'today') qs += `&date=eq.${today}`;
     if (currentFilter === 'week') qs += `&date=gte.${weekAgo}`;
@@ -1146,7 +1281,7 @@ function recordHTML(r) {
 async function downloadRecord(id) {
   showLoading('PDFを生成中...');
   try {
-    const rows = await sbFetch('records', 'GET', null, `?id=eq.${id}&user_id=eq.${currentUser.id}`);
+    const rows = await sbFetch('records', 'GET', null, `?id=eq.${id}&company_id=eq.${currentUser.company_id}`);
     if (rows[0]) { 
       await generatePDF(rows[0], true); 
       hideLoading();
@@ -1161,7 +1296,7 @@ async function downloadRecord(id) {
 async function deleteRecord(id) {
   if (!confirm('この伝票を削除しますか？')) return;
   try {
-    await sbFetch('records', 'DELETE', null, `?id=eq.${id}&user_id=eq.${currentUser.id}`);
+    await sbFetch('records', 'DELETE', null, `?id=eq.${id}&company_id=eq.${currentUser.company_id}`);
     await renderList(); await updateHome(); showToast('削除しました');
   } catch(e) { showToast('エラー：' + e.message); }
 }
@@ -1170,7 +1305,7 @@ async function deleteRecord(id) {
 async function openDetail(id) {
   currentDetailId = id;
   try {
-    const rows = await sbFetch('records', 'GET', null, `?id=eq.${id}&user_id=eq.${currentUser.id}`);
+    const rows = await sbFetch('records', 'GET', null, `?id=eq.${id}&company_id=eq.${currentUser.company_id}`);
     const r = rows[0]; if (!r) return;
     document.getElementById('detail-title').textContent = r.project || '（無題）';
     const rowsData = [
@@ -1200,7 +1335,7 @@ async function openDetail(id) {
 async function openEmailModal(id) {
   currentDetailId = id;
   try {
-    const rows = await sbFetch('records', 'GET', null, `?id=eq.${id}&user_id=eq.${currentUser.id}`);
+    const rows = await sbFetch('records', 'GET', null, `?id=eq.${id}&company_id=eq.${currentUser.company_id}`);
     const r = rows[0]; if (!r) return;
     document.getElementById('email-subject').value = `作業完了のご報告：${r.project}（${r.date}）`;
     document.getElementById('email-body').value = `お世話になっております。\n${r.project}の作業が完了しましたので、完了伝票PDFをお送りします。\nご確認のほど、よろしくお願いいたします。`;
@@ -1224,8 +1359,8 @@ async function exportData() {
   showLoading('エクスポート中...');
   try {
     const [records, queue] = await Promise.all([
-      sbFetch('records', 'GET', null, `?user_id=eq.${currentUser.id}&order=created_at.desc`),
-      sbFetch('sign_queue', 'GET', null, `?user_id=eq.${currentUser.id}&order=created_at.desc`)
+      sbFetch('records', 'GET', null, `?company_id=eq.${currentUser.company_id}&order=created_at.desc`),
+      sbFetch('sign_queue', 'GET', null, `?company_id=eq.${currentUser.company_id}&order=created_at.desc`)
     ]);
     const data = { records, queue, settings: getSettings(), exportedAt: new Date().toISOString() };
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
@@ -1238,8 +1373,8 @@ async function clearAllData() {
   if (!confirm('すべてのデータを削除しますか？\nこの操作は取り消せません。')) return;
   showLoading('削除中...');
   try {
-    await sbFetch('records', 'DELETE', null, `?user_id=eq.${currentUser.id}`);
-    await sbFetch('sign_queue', 'DELETE', null, `?user_id=eq.${currentUser.id}`);
+    await sbFetch('records', 'DELETE', null, `?company_id=eq.${currentUser.company_id}`);
+    await sbFetch('sign_queue', 'DELETE', null, `?company_id=eq.${currentUser.company_id}`);
     hideLoading(); await updateHome(); await renderList(); showToast('データを削除しました');
   } catch(e) { hideLoading(); showToast('エラー：' + e.message); }
 }
@@ -1279,7 +1414,7 @@ function showToast(msg) {
 }
 
 // ════════════ BOOT ════════════
-const savedUser = localStorage.getItem('denpo_v1_user');
+const savedUser = localStorage.getItem('axia_user');
 if (savedUser) { try { currentUser = JSON.parse(savedUser); enterApp(); } catch {} }
 </script>
 </body>
