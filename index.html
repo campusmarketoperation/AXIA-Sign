@@ -394,22 +394,29 @@
 
       <div class="card">
         <div class="card-title">PDF設定</div>
-        <div class="setting-row">
-          <div>
+        <div class="setting-row" style="align-items:flex-start;padding:16px 0;">
+          <div style="flex:1">
             <div class="setting-label">会社ロゴ</div>
-            <div class="setting-sub">PDFヘッダーに表示（近日対応）</div>
+            <div class="setting-sub">PDFヘッダーの右上に表示されます<br>PNG・JPG・SVG（推奨サイズ：横300px以内）</div>
+            <div id="logo-preview-wrap" style="display:none;margin-top:12px;">
+              <img id="logo-preview-img" style="max-height:48px;max-width:180px;object-fit:contain;border-radius:4px;background:var(--surface2);padding:4px;">
+              <button onclick="removeLogo()" style="display:block;margin-top:8px;background:none;border:none;font-size:12px;color:var(--red-text);cursor:pointer;">ロゴを削除</button>
+            </div>
           </div>
-          <span class="badge badge-gray">準備中</span>
+          <div style="flex-shrink:0;margin-left:16px;">
+            <label for="logo-file-input" class="btn btn-ghost btn-sm" style="cursor:pointer;white-space:nowrap;">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+              アップロード
+            </label>
+            <input type="file" id="logo-file-input" accept="image/*" style="display:none" onchange="onLogoSelected(this)">
+          </div>
         </div>
         <div class="setting-row">
           <div>
             <div class="setting-label">印刷レイアウト</div>
-            <div class="setting-sub">A4 / レシートプリンター</div>
+            <div class="setting-sub">A4縦</div>
           </div>
-          <select style="width:auto;padding:6px 32px 6px 10px;font-size:13px">
-            <option>A4</option>
-            <option disabled>レシート（近日対応）</option>
-          </select>
+          <span class="badge badge-green">A4</span>
         </div>
       </div>
 
@@ -764,11 +771,11 @@ async function enterApp() {
   document.getElementById('auth-screen').style.display = 'none';
   document.getElementById('app').style.display = 'flex';
   document.getElementById('user-label').textContent = currentUser.name;
-  // 設定画面の会社情報を表示
   const nameEl = document.getElementById('s-company-name');
   const idEl   = document.getElementById('s-company-id');
   if (nameEl) nameEl.textContent = currentUser.company || '（未設定）';
   if (idEl)   idEl.textContent   = currentUser.company_id || '—';
+  _logoCache = undefined; // ログインのたびにロゴを再取得
   initFullSignPad();
   setDefaults();
   loadSettings();
@@ -879,6 +886,7 @@ async function switchScreen(name) {
   if (name === 'list') await renderList();
   if (name === 'queue') await renderQueue();
   if (name === 'new') await setDefaults();
+  if (name === 'settings') { renderStaffSettings(); loadLogoPreview(); }
   window.scrollTo(0, 0);
 }
 
@@ -1148,25 +1156,150 @@ async function completeSign() {
 }
 
 // ════════════ PDF GENERATION（文字化け・レイアウトの完全修正箇所） ════════════
+// ════════════ LOGO MANAGEMENT（Supabase Storage同期）════════════
+const LOGO_BUCKET = 'logos';
+
+// 会社ごとのロゴパス（company_id単位で1ファイル共有）
+function logoPath() {
+  return `${currentUser.company_id}/logo`;
+}
+
+// Supabaseへアップロード
+async function uploadLogoToStorage(file) {
+  const path = logoPath();
+  const res = await fetch(
+    `${SB_URL}/storage/v1/object/${LOGO_BUCKET}/${path}`,
+    {
+      method: 'POST',
+      headers: {
+        'apikey': SB_KEY,
+        'Authorization': 'Bearer ' + SB_KEY,
+        'Content-Type': file.type,
+        'x-upsert': 'true'   // 上書きOK
+      },
+      body: file
+    }
+  );
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.message || 'アップロード失敗');
+  }
+}
+
+// Supabase Storageのロゴ公開URLを取得
+function logoPublicUrl() {
+  return `${SB_URL}/storage/v1/object/public/${LOGO_BUCKET}/${logoPath()}`;
+}
+
+// Supabaseからロゴを削除
+async function deleteLogoFromStorage() {
+  await fetch(
+    `${SB_URL}/storage/v1/object/${LOGO_BUCKET}`,
+    {
+      method: 'DELETE',
+      headers: {
+        'apikey': SB_KEY,
+        'Authorization': 'Bearer ' + SB_KEY,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ prefixes: [logoPath()] })
+    }
+  );
+}
+
+// ロゴが存在するか確認（キャッシュバスター付きで読み込み試行）
+async function fetchLogoDataUrl() {
+  try {
+    const url = logoPublicUrl() + '?t=' + Date.now();
+    const res = await fetch(url);
+    if (!res.ok) return null;
+    const blob = await res.blob();
+    return await new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = e => resolve(e.target.result);
+      reader.readAsDataURL(blob);
+    });
+  } catch { return null; }
+}
+
+// キャッシュ（端末内）— 毎回ダウンロードしないよう一時保持
+let _logoCache = undefined; // undefined=未取得, null=なし, string=dataUrl
+
+async function getLogoDataUrl() {
+  if (_logoCache !== undefined) return _logoCache;
+  _logoCache = await fetchLogoDataUrl();
+  return _logoCache;
+}
+
+function onLogoSelected(input) {
+  const file = input.files[0];
+  if (!file) return;
+  if (file.size > 2 * 1024 * 1024) { showToast('ファイルサイズは2MB以内にしてください'); return; }
+  showLoading('ロゴをアップロード中...');
+  uploadLogoToStorage(file)
+    .then(() => {
+      _logoCache = undefined; // キャッシュをクリアして再取得させる
+      return fetchLogoDataUrl();
+    })
+    .then(dataUrl => {
+      _logoCache = dataUrl;
+      showLogoPreview(dataUrl);
+      hideLoading();
+      showToast('ロゴを保存しました（全端末に同期されます）');
+    })
+    .catch(e => { hideLoading(); showToast('エラー：' + e.message); });
+  input.value = '';
+}
+
+async function removeLogo() {
+  showLoading('削除中...');
+  try {
+    await deleteLogoFromStorage();
+    _logoCache = null;
+    document.getElementById('logo-preview-wrap').style.display = 'none';
+    document.getElementById('logo-preview-img').src = '';
+    hideLoading();
+    showToast('ロゴを削除しました');
+  } catch(e) { hideLoading(); showToast('エラー：' + e.message); }
+}
+
+function showLogoPreview(dataUrl) {
+  const wrap = document.getElementById('logo-preview-wrap');
+  const img  = document.getElementById('logo-preview-img');
+  if (dataUrl) { img.src = dataUrl; wrap.style.display = ''; }
+  else { wrap.style.display = 'none'; }
+}
+
+async function loadLogoPreview() {
+  const dataUrl = await getLogoDataUrl();
+  showLogoPreview(dataUrl);
+}
+
 async function generatePDF(r, download) {
-  // 一時的に画面外に美麗なPDF用のHTML要素を組み立てる
   const container = document.createElement('div');
   container.style.cssText = 'width:760px; padding:40px; background:#ffffff; color:#1a1917; font-family:sans-serif; position:fixed; top:-9999px; left:0; line-height:1.6;';
-  
+
   const s = getSettings();
   const title = r.has_sig ? '作業完了伝票' : '作業完了伝票（控え・未サイン）';
-  
+  const logoDataUrl = await getLogoDataUrl();
+  const companyName = currentUser?.company || s.company || 'AXIA Sign';
+
+  // ヘッダー：ロゴがあれば右上に表示
+  const headerRight = logoDataUrl
+    ? `<img src="${logoDataUrl}" style="max-height:44px; max-width:160px; object-fit:contain; filter:brightness(0) invert(1);">`
+    : `<span style="font-size:14px; font-weight:bold; letter-spacing:0.5px;">AXIA Sign</span>`;
+
   container.innerHTML = `
     <div style="background:#1a1917; color:#ffffff; padding:24px; display:flex; justify-content:space-between; align-items:center; border-radius:6px;">
       <h1 style="margin:0; font-size:26px; font-weight:bold; letter-spacing:1px;">${title}</h1>
-      <span style="font-size:14px; font-weight:bold; letter-spacing:0.5px;">AXIA Sign</span>
+      ${headerRight}
     </div>
-    
+
     <div style="margin-top:25px; font-size:13px; color:#6b6963; display:flex; justify-content:space-between; padding:0 4px;">
       <div>発行日時：${new Date(r.signed_at || r.created_at || Date.now()).toLocaleString('ja-JP')}</div>
       <div>伝票番号：${r.id || '—'}</div>
     </div>
-    
+
     <table style="width:100%; border-collapse:collapse; margin-top:20px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
       ${[
         ['案件名', r.project],
@@ -1182,41 +1315,41 @@ async function generatePDF(r, download) {
         </tr>
       `).join('')}
     </table>
-    
+
     <div style="margin-top:35px;">
       <div style="font-size:14px; font-weight:600; color:#6b6963; margin-bottom:10px; padding-left:4px;">お客様ご確認サイン</div>
       <div style="border:1px dashed #c8c7c3; border-radius:8px; height:180px; display:flex; align-items:center; justify-content:center; background:#fafafa; overflow:hidden;">
-        ${r.sig_data || r.sigData ? 
-          `<img src="${r.sig_data || r.sigData}" style="max-width:95%; max-height:95%; object-fit:contain; filter: multiply(1.2);">` : 
-          '<span style="color:#9e9b95; font-size:14px;">サイン受領なし</span>'}
+        ${r.sig_data || r.sigData
+          ? `<img src="${r.sig_data || r.sigData}" style="max-width:95%; max-height:95%; object-fit:contain;">`
+          : '<span style="color:#9e9b95; font-size:14px;">サイン受領なし</span>'}
       </div>
     </div>
-    
+
     <div style="margin-top:50px; border-top:1px solid #e8e7e3; padding-top:20px; display:flex; justify-content:space-between; align-items:center; font-size:13px; color:#9e9b95; padding-left:4px; padding-right:4px;">
-      <div style="font-weight:bold; color:#6b6963;">${s.company || 'AXIA Sign'}</div>
+      <div style="display:flex;align-items:center;gap:10px;">
+        ${logoDataUrl ? `<img src="${logoDataUrl}" style="max-height:24px;max-width:80px;object-fit:contain;opacity:0.6;">` : ''}
+        <span style="font-weight:bold; color:#6b6963;">${companyName}</span>
+      </div>
       <div>本書は電子伝票システム(AXIA Sign)により自動発行されました。</div>
     </div>
   `;
-  
+
   document.body.appendChild(container);
-  
-  // html2canvasでHTMLを高解像度の画像に変換（日本語文字化けの根本解決）
-  const canvas = await html2canvas(container, { 
-    scale: 2, 
+
+  const canvas = await html2canvas(container, {
+    scale: 2,
     useCORS: true,
     backgroundColor: '#ffffff'
   });
   document.body.removeChild(container);
-  
+
   const imgData = canvas.toDataURL('image/jpeg', 0.95);
-  
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF({ unit: 'mm', format: 'a4' });
-  const imgWidth = 210; 
+  const imgWidth = 210;
   const imgHeight = (canvas.height * imgWidth) / canvas.width;
-  
   doc.addImage(imgData, 'JPEG', 0, 0, imgWidth, imgHeight);
-  
+
   if (download) {
     doc.save('伝票_' + (r.project || '無題') + '_' + (r.date || '') + '.pdf');
     return null;
