@@ -289,18 +289,95 @@
           </div>
         </div>
         <div class="form-row">
-          <div class="field">
-            <label>稼働日 *</label>
-            <input type="date" id="f-date">
-          </div>
-          <div class="field">
-            <label>稼働時間（h）*</label>
-            <input type="number" id="f-hours" placeholder="8" min="0" max="24" step="0.5">
-          </div>
+          <div class="field"><label>伝票No.</label><input type="text" id="f-slip-no" placeholder="例：031967"></div>
+          <div class="field"><label>稼働日 *</label><input type="date" id="f-date"></div>
         </div>
-        <div class="field">
-          <label>備考</label>
+      </div>
+
+      <div class="card">
+        <div class="card-title">作業時間</div>
+        <div style="overflow-x:auto;">
+          <table style="width:100%;border-collapse:collapse;font-size:13px;min-width:500px;">
+            <thead>
+              <tr style="background:var(--surface2);">
+                <th style="padding:8px 6px;text-align:center;color:var(--text2);font-weight:500;border:0.5px solid var(--border);width:90px;">日付</th>
+                <th style="padding:8px 6px;text-align:center;color:var(--text2);font-weight:500;border:0.5px solid var(--border);min-width:80px;">名前</th>
+                <th style="padding:8px 6px;text-align:center;color:var(--text2);font-weight:500;border:0.5px solid var(--border);">開始</th>
+                <th style="padding:8px 6px;text-align:center;color:var(--text2);font-weight:500;border:0.5px solid var(--border);">終了</th>
+                <th style="padding:8px 6px;text-align:center;color:var(--text2);font-weight:500;border:0.5px solid var(--border);">休憩(h)</th>
+                <th style="padding:8px 6px;text-align:center;color:var(--text2);font-weight:500;border:0.5px solid var(--border);">普通</th>
+                <th style="padding:8px 6px;text-align:center;color:var(--text2);font-weight:500;border:0.5px solid var(--border);">深夜</th>
+                <th style="padding:8px 6px;text-align:center;color:var(--text2);font-weight:500;border:0.5px solid var(--border);">早朝</th>
+                <th style="padding:8px 4px;border:0.5px solid var(--border);width:32px;"></th>
+              </tr>
+            </thead>
+            <tbody id="time-rows-body"></tbody>
+          </table>
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="addTimeRow()" style="margin-top:10px;width:100%;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>行を追加
+        </button>
+        <div style="margin-top:12px;padding:10px 12px;background:var(--surface2);border-radius:var(--radius);font-size:13px;display:flex;flex-wrap:wrap;gap:16px;">
+          <span>普通：<strong id="total-normal">0.0</strong>h</span>
+          <span>深夜：<strong id="total-late">0.0</strong>h</span>
+          <span>早朝：<strong id="total-early">0.0</strong>h</span>
+          <span>実働合計：<strong id="total-all">0.0</strong>h</span>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">作業内容チェック</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+          <label style="display:flex;align-items:center;gap:8px;padding:8px;background:var(--surface2);border-radius:var(--radius);cursor:pointer;font-size:13px;">
+            <input type="checkbox" id="chk-0" style="width:16px;height:16px;accent-color:var(--accent);cursor:pointer;" onchange="calcAmount()">
+            <span>1．設備の巡回・点検</span>
+          </label>
+          <label style="display:flex;align-items:center;gap:8px;padding:8px;background:var(--surface2);border-radius:var(--radius);cursor:pointer;font-size:13px;">
+            <input type="checkbox" id="chk-1" style="width:16px;height:16px;accent-color:var(--accent);cursor:pointer;" onchange="calcAmount()">
+            <span>2．清掃作業</span>
+          </label>
+          <label style="display:flex;align-items:center;gap:8px;padding:8px;background:var(--surface2);border-radius:var(--radius);cursor:pointer;font-size:13px;">
+            <input type="checkbox" id="chk-2" style="width:16px;height:16px;accent-color:var(--accent);cursor:pointer;" onchange="calcAmount()">
+            <span>3．一般廃棄物の処理</span>
+          </label>
+          <label style="display:flex;align-items:center;gap:8px;padding:8px;background:var(--surface2);border-radius:var(--radius);cursor:pointer;font-size:13px;">
+            <input type="checkbox" id="chk-3" style="width:16px;height:16px;accent-color:var(--accent);cursor:pointer;" onchange="calcAmount()">
+            <span>4．非業自らの発生ゴミ処理</span>
+          </label>
+          <label style="display:flex;align-items:center;gap:8px;padding:8px;background:var(--surface2);border-radius:var(--radius);cursor:pointer;font-size:13px;">
+            <input type="checkbox" id="chk-4" style="width:16px;height:16px;accent-color:var(--accent);cursor:pointer;" onchange="calcAmount()">
+            <span>5．工事関係車両・音響の管理</span>
+          </label>
+          <label style="display:flex;align-items:center;gap:8px;padding:8px;background:var(--surface2);border-radius:var(--radius);cursor:pointer;font-size:13px;">
+            <input type="checkbox" id="chk-5" style="width:16px;height:16px;accent-color:var(--accent);cursor:pointer;" onchange="calcAmount()">
+            <span>6．廃材回収・運搬作業</span>
+          </label>
+          <label style="display:flex;align-items:center;gap:8px;padding:8px;background:var(--surface2);border-radius:var(--radius);cursor:pointer;font-size:13px;">
+            <input type="checkbox" id="chk-6" style="width:16px;height:16px;accent-color:var(--accent);cursor:pointer;" onchange="calcAmount()">
+            <span>7．交互通行</span>
+          </label>
+          <label style="display:flex;align-items:center;gap:8px;padding:8px;background:var(--surface2);border-radius:var(--radius);cursor:pointer;font-size:13px;">
+            <input type="checkbox" id="chk-7" style="width:16px;height:16px;accent-color:var(--accent);cursor:pointer;" onchange="calcAmount()">
+            <span>8．その他</span>
+          </label>
+        </div>
+        <div class="field" style="margin-top:12px;margin-bottom:0">
+          <label>備考・その他詳細</label>
           <textarea id="f-note" rows="2" placeholder="特記事項があれば..."></textarea>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">金額</div>
+        <div class="form-row">
+          <div class="field">
+            <label>単価（円/h）</label>
+            <input type="number" id="f-unit-price" placeholder="例：1500" min="0" step="1" oninput="calcAmount()">
+          </div>
+          <div class="field">
+            <label>合計金額（自動計算）</label>
+            <input type="text" id="f-amount" readonly style="background:var(--surface2);font-weight:600;" placeholder="0円">
+          </div>
         </div>
       </div>
 
@@ -308,7 +385,6 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="var(--amber-text)" stroke-width="2" width="18" height="18" style="flex-shrink:0;margin-top:1px"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
         <span style="font-size:13px;color:var(--amber-text);line-height:1.5">入力完了後、「サイン待ちに追加」で保存します。お客様のサインは次の画面で行います。</span>
       </div>
-
       <div style="display:flex;flex-direction:column;gap:10px">
         <button class="btn btn-primary" onclick="sendToSignQueue()">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="17" height="17"><path d="M12 22C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10-4.477 10-10 10z"/><path d="M9 12l2 2 4-4"/></svg>
@@ -915,22 +991,126 @@ async function updateHome() {
 }
 
 // ════════════ QUEUE ════════════
+// 作業時間行の追加
+let timeRowCount = 0;
+function addTimeRow(data = {}) {
+  const tbody = document.getElementById('time-rows-body');
+  const idx = timeRowCount++;
+  const tr = document.createElement('tr');
+  tr.id = `tr-${idx}`;
+  tr.innerHTML = `
+    <td style="border:0.5px solid var(--border);padding:4px 3px;"><input type="date" id="tr-date-${idx}" value="${data.date||''}" style="width:100%;font-size:12px;padding:4px;border:none;background:transparent;color:var(--text);" oninput="recalcTime()"></td>
+    <td style="border:0.5px solid var(--border);padding:4px 3px;"><input type="text" id="tr-name-${idx}" value="${data.name||''}" placeholder="名前" style="width:100%;font-size:12px;padding:4px;border:none;background:transparent;color:var(--text);min-width:60px;"></td>
+    <td style="border:0.5px solid var(--border);padding:4px 3px;"><input type="time" id="tr-start-${idx}" value="${data.start||''}" style="width:100%;font-size:12px;padding:4px;border:none;background:transparent;color:var(--text);" oninput="recalcTime()"></td>
+    <td style="border:0.5px solid var(--border);padding:4px 3px;"><input type="time" id="tr-end-${idx}" value="${data.end||''}" style="width:100%;font-size:12px;padding:4px;border:none;background:transparent;color:var(--text);" oninput="recalcTime()"></td>
+    <td style="border:0.5px solid var(--border);padding:4px 3px;"><input type="number" id="tr-break-${idx}" value="${data.break_h||0}" min="0" step="0.5" style="width:100%;font-size:12px;padding:4px;border:none;background:transparent;color:var(--text);text-align:center;" oninput="recalcTime()"></td>
+    <td style="border:0.5px solid var(--border);padding:4px 3px;text-align:center;font-size:12px;font-weight:600;color:var(--text)" id="tr-normal-${idx}">${data.normal||'—'}</td>
+    <td style="border:0.5px solid var(--border);padding:4px 3px;text-align:center;font-size:12px;font-weight:600;color:var(--text)" id="tr-late-${idx}">${data.late||'—'}</td>
+    <td style="border:0.5px solid var(--border);padding:4px 3px;text-align:center;font-size:12px;font-weight:600;color:var(--text)" id="tr-early-${idx}">${data.early||'—'}</td>
+    <td style="border:0.5px solid var(--border);padding:2px;text-align:center;">
+      <button onclick="removeTimeRow('tr-${idx}')" style="background:none;border:none;cursor:pointer;color:var(--text3);font-size:16px;line-height:1;padding:2px 4px;">×</button>
+    </td>`;
+  tbody.appendChild(tr);
+  recalcTime();
+}
+function removeTimeRow(id) {
+  document.getElementById(id)?.remove();
+  recalcTime();
+}
+function calcHours(start, end, breakH) {
+  if (!start || !end) return { total:0, normal:0, late:0, early:0 };
+  const [sh,sm] = start.split(':').map(Number);
+  const [eh,em] = end.split(':').map(Number);
+  let startMin = sh*60+sm, endMin = eh*60+em;
+  if (endMin <= startMin) endMin += 24*60; // 日をまたぐ
+  const workMin = Math.max(0, endMin - startMin - (parseFloat(breakH)||0)*60);
+  // 時間帯区分: 早朝5〜8時、深夜22〜29時(翌5時)
+  let normal=0, late=0, early=0;
+  for (let m = startMin; m < startMin + workMin; m++) {
+    const actual = m % (24*60);
+    if (actual >= 5*60 && actual < 8*60) early += 1/60;
+    else if (actual >= 22*60 || actual < 5*60) late += 1/60;
+    else normal += 1/60;
+  }
+  // 休憩を普通時間から引く（簡易）
+  const breakH2 = parseFloat(breakH)||0;
+  normal = Math.max(0, normal - breakH2);
+  return { total: normal+late+early, normal: Math.round(normal*10)/10, late: Math.round(late*10)/10, early: Math.round(early*10)/10 };
+}
+function recalcTime() {
+  const tbody = document.getElementById('time-rows-body');
+  if (!tbody) return;
+  let tNormal=0, tLate=0, tEarly=0;
+  tbody.querySelectorAll('tr').forEach(tr => {
+    const idx = tr.id.replace('tr-','');
+    const start = document.getElementById(`tr-start-${idx}`)?.value;
+    const end   = document.getElementById(`tr-end-${idx}`)?.value;
+    const brk   = document.getElementById(`tr-break-${idx}`)?.value;
+    const h = calcHours(start, end, brk);
+    const setCell = (id, val) => { const el = document.getElementById(id); if(el) el.textContent = val > 0 ? val.toFixed(1) : '—'; };
+    setCell(`tr-normal-${idx}`, h.normal);
+    setCell(`tr-late-${idx}`, h.late);
+    setCell(`tr-early-${idx}`, h.early);
+    tNormal += h.normal; tLate += h.late; tEarly += h.early;
+  });
+  const tAll = tNormal + tLate + tEarly;
+  document.getElementById('total-normal').textContent = tNormal.toFixed(1);
+  document.getElementById('total-late').textContent   = tLate.toFixed(1);
+  document.getElementById('total-early').textContent  = tEarly.toFixed(1);
+  document.getElementById('total-all').textContent    = tAll.toFixed(1);
+  calcAmount();
+}
+function calcAmount() {
+  const unitPrice = parseFloat(document.getElementById('f-unit-price')?.value) || 0;
+  const total = parseFloat(document.getElementById('total-all')?.textContent) || 0;
+  const amount = Math.round(unitPrice * total);
+  const el = document.getElementById('f-amount');
+  if (el) el.value = amount > 0 ? amount.toLocaleString('ja-JP') + '円' : '';
+}
+function getTimeRows() {
+  const tbody = document.getElementById('time-rows-body');
+  if (!tbody) return [];
+  return Array.from(tbody.querySelectorAll('tr')).map(tr => {
+    const idx = tr.id.replace('tr-','');
+    return {
+      date:    document.getElementById(`tr-date-${idx}`)?.value || '',
+      name:    document.getElementById(`tr-name-${idx}`)?.value || '',
+      start:   document.getElementById(`tr-start-${idx}`)?.value || '',
+      end:     document.getElementById(`tr-end-${idx}`)?.value || '',
+      break_h: parseFloat(document.getElementById(`tr-break-${idx}`)?.value)||0,
+      normal:  parseFloat(document.getElementById(`tr-normal-${idx}`)?.textContent)||0,
+      late:    parseFloat(document.getElementById(`tr-late-${idx}`)?.textContent)||0,
+      early:   parseFloat(document.getElementById(`tr-early-${idx}`)?.textContent)||0,
+    };
+  });
+}
+function getChecklist() {
+  return [0,1,2,3,4,5,6,7].map(i => document.getElementById(`chk-${i}`)?.checked || false);
+}
+const CHECKLIST_LABELS = ['設備の巡回・点検','清掃作業','一般廃棄物の処理','非業自らの発生ゴミ処理','工事関係車両・音響の管理','廃材回収・運搬作業','交互通行','その他'];
+
 function getFormData() {
+  const timeRows = getTimeRows();
+  const totalHours = timeRows.reduce((s,r) => s + r.normal + r.late + r.early, 0);
   return {
-    project: document.getElementById('f-project').value.trim(),
-    site: document.getElementById('f-site').value.trim(),
-    staff: getSelectedStaff(),
-    date: document.getElementById('f-date').value,
-    hours: document.getElementById('f-hours').value,
-    note: document.getElementById('f-note').value.trim()
+    slip_no:    document.getElementById('f-slip-no').value.trim(),
+    project:    document.getElementById('f-project').value.trim(),
+    site:       document.getElementById('f-site').value.trim(),
+    staff:      getSelectedStaff(),
+    date:       document.getElementById('f-date').value,
+    hours:      Math.round(totalHours * 10) / 10,
+    note:       document.getElementById('f-note').value.trim(),
+    time_rows:  timeRows,
+    checklist:  getChecklist(),
+    unit_price: parseFloat(document.getElementById('f-unit-price').value) || 0,
   };
 }
 function validate(d) {
   if (!d.project) { showToast('案件名を入力してください'); return false; }
-  if (!d.site) { showToast('現場名を入力してください'); return false; }
-  if (!d.staff) { showToast('スタッフ名を入力してください'); return false; }
-  if (!d.date) { showToast('稼働日を入力してください'); return false; }
-  if (!d.hours) { showToast('稼働時間を入力してください'); return false; }
+  if (!d.site)    { showToast('現場名を入力してください'); return false; }
+  if (!d.staff)   { showToast('スタッフ名を入力してください'); return false; }
+  if (!d.date)    { showToast('稼働日を入力してください'); return false; }
+  if (!d.time_rows.length) { showToast('作業時間を1行以上入力してください'); return false; }
   return true;
 }
 
@@ -939,32 +1119,41 @@ async function sendToSignQueue() {
   if (!validate(d)) return;
   showLoading('保存中...');
   try {
-    // 【対策】Supabase側のidが自動採番になっていなくても、int型(32bit)の制限に絶対に引っかからない8桁のランダム数字
     const safeId = Math.floor(10000000 + Math.random() * 90000000);
-
     await sbFetch('sign_queue', 'POST', {
       id: safeId,
-      user_id: currentUser.id,
+      user_id:    currentUser.id,
       company_id: currentUser.company_id,
-      project: d.project,
-      site: d.site,
-      staff: d.staff,
-      date: d.date,
-      hours: parseFloat(d.hours),
-      note: d.note
+      project:    d.project,
+      site:       d.site,
+      staff:      d.staff,
+      date:       d.date,
+      hours:      d.hours,
+      note:       d.note,
+      time_rows:  d.time_rows,
+      checklist:  d.checklist,
+      unit_price: d.unit_price,
+      slip_no:    d.slip_no,
     });
-    
-    ['f-project','f-note'].forEach(id => document.getElementById(id).value = '');
-    document.getElementById('f-hours').value = '';
-    await setDefaults();
+    resetForm();
     hideLoading();
     showToast('サイン待ちに追加しました');
     await switchScreen('queue');
-  } catch(e) { 
-    hideLoading(); 
-    console.error('❌【フロントエンド実行エラー】:', e);
-    showToast('エラー：' + e.message); 
+  } catch(e) {
+    hideLoading();
+    console.error('❌:', e);
+    showToast('エラー：' + e.message);
   }
+}
+
+function resetForm() {
+  ['f-project','f-note','f-slip-no'].forEach(id => { const el = document.getElementById(id); if(el) el.value = ''; });
+  document.getElementById('f-unit-price').value = '';
+  document.getElementById('f-amount').value = '';
+  [0,1,2,3,4,5,6,7].forEach(i => { const el = document.getElementById(`chk-${i}`); if(el) el.checked = false; });
+  document.getElementById('time-rows-body').innerHTML = '';
+  timeRowCount = 0;
+  setDefaults();
 }
 
 async function previewDraft() {
@@ -975,7 +1164,16 @@ async function previewDraft() {
     const uri = await generatePDF({ ...d, has_sig: false, created_at: new Date().toISOString() }, false);
     hideLoading();
     if (uri) window.open(uri, '_blank');
-  } catch(e) { hideLoading(); showToast('プレビュー生成に失敗しました。ローカルサーバー経由で起動してください。'); }
+  } catch(e) { hideLoading(); showToast('プレビュー生成に失敗しました。'); }
+}
+
+async function setDefaults() {
+  document.getElementById('f-date').value = new Date().toISOString().split('T')[0];
+  const tbody = document.getElementById('time-rows-body');
+  if (tbody && !tbody.children.length) {
+    addTimeRow({ date: new Date().toISOString().split('T')[0] });
+  }
+  await refreshStaffSelect();
 }
 
 async function renderQueue() {
@@ -1135,12 +1333,16 @@ async function completeSign() {
 
     await sbFetch('records', 'POST', {
       id: item.id,
-      user_id: currentUser.id,
+      user_id:    currentUser.id,
       company_id: currentUser.company_id,
-      project: item.project, site: item.site, staff: item.staff,
-      date: item.date, hours: item.hours, note: item.note,
-      sig_data: sigData, has_sig: true,
-      signed_at: new Date().toISOString()
+      project:    item.project, site: item.site, staff: item.staff,
+      date:       item.date, hours: item.hours, note: item.note,
+      time_rows:  item.time_rows  || [],
+      checklist:  item.checklist  || [],
+      unit_price: item.unit_price || 0,
+      slip_no:    item.slip_no    || '',
+      sig_data:   sigData, has_sig: true,
+      signed_at:  new Date().toISOString()
     });
     await sbFetch('sign_queue', 'DELETE', null, `?id=eq.${signingQueueId}&company_id=eq.${currentUser.company_id}`);
 
@@ -1277,81 +1479,162 @@ async function loadLogoPreview() {
 
 async function generatePDF(r, download) {
   const container = document.createElement('div');
-  container.style.cssText = 'width:760px; padding:40px; background:#ffffff; color:#1a1917; font-family:sans-serif; position:fixed; top:-9999px; left:0; line-height:1.6;';
-
+  container.style.cssText = 'width:760px;padding:40px;background:#ffffff;color:#1a1917;font-family:sans-serif;position:fixed;top:-9999px;left:0;line-height:1.6;';
   const s = getSettings();
-  const title = r.has_sig ? '作業完了伝票' : '作業完了伝票（控え・未サイン）';
+  const title = r.has_sig ? '作業完了伝票' : '作業完了伝票（控え）';
   const logoDataUrl = await getLogoDataUrl();
   const companyName = currentUser?.company || s.company || 'AXIA Sign';
-
-  // ヘッダー：ロゴがあれば右上に表示
   const headerRight = logoDataUrl
-    ? `<img src="${logoDataUrl}" style="max-height:44px; max-width:160px; object-fit:contain; filter:brightness(0) invert(1);">`
-    : `<span style="font-size:14px; font-weight:bold; letter-spacing:0.5px;">AXIA Sign</span>`;
+    ? `<img src="${logoDataUrl}" style="max-height:44px;max-width:160px;object-fit:contain;filter:brightness(0) invert(1);">`
+    : `<span style="font-size:14px;font-weight:bold;">AXIA Sign</span>`;
+
+  // 時間合計
+  const rows = r.time_rows || [];
+  const tNormal = rows.reduce((s,x)=>s+(x.normal||0),0);
+  const tLate   = rows.reduce((s,x)=>s+(x.late||0),0);
+  const tEarly  = rows.reduce((s,x)=>s+(x.early||0),0);
+  const tAll    = tNormal+tLate+tEarly || r.hours || 0;
+  const amount  = r.unit_price ? Math.round(r.unit_price * tAll) : 0;
+
+  // チェックリスト
+  const checks = r.checklist || [];
+  const checkedItems = CHECKLIST_LABELS.filter((_,i)=>checks[i]);
+
+  // 時間行テーブル
+  const timeTableRows = rows.length ? rows.map(row=>`
+    <tr>
+      <td style="padding:8px;border:1px solid #e8e7e3;font-size:13px;text-align:center;">${row.date||'—'}</td>
+      <td style="padding:8px;border:1px solid #e8e7e3;font-size:13px;text-align:center;font-weight:500;">${row.name||'—'}</td>
+      <td style="padding:8px;border:1px solid #e8e7e3;font-size:13px;text-align:center;">${row.start||'—'}</td>
+      <td style="padding:8px;border:1px solid #e8e7e3;font-size:13px;text-align:center;">${row.end||'—'}</td>
+      <td style="padding:8px;border:1px solid #e8e7e3;font-size:13px;text-align:center;">${row.break_h||0}h</td>
+      <td style="padding:8px;border:1px solid #e8e7e3;font-size:13px;text-align:center;font-weight:600;">${row.normal>0?row.normal.toFixed(1)+'h':'—'}</td>
+      <td style="padding:8px;border:1px solid #e8e7e3;font-size:13px;text-align:center;font-weight:600;">${row.late>0?row.late.toFixed(1)+'h':'—'}</td>
+      <td style="padding:8px;border:1px solid #e8e7e3;font-size:13px;text-align:center;font-weight:600;">${row.early>0?row.early.toFixed(1)+'h':'—'}</td>
+    </tr>`).join('') : `<tr><td colspan="8" style="padding:12px;border:1px solid #e8e7e3;text-align:center;color:#9e9b95;font-size:13px;">—</td></tr>`;
 
   container.innerHTML = `
-    <div style="background:#1a1917; color:#ffffff; padding:24px; display:flex; justify-content:space-between; align-items:center; border-radius:6px;">
-      <h1 style="margin:0; font-size:26px; font-weight:bold; letter-spacing:1px;">${title}</h1>
+    <div style="background:#1a1917;color:#fff;padding:24px;display:flex;justify-content:space-between;align-items:center;border-radius:6px;">
+      <div>
+        <div style="font-size:10px;letter-spacing:2px;opacity:0.6;margin-bottom:4px;">SERVICE COMPLETION SLIP</div>
+        <h1 style="margin:0;font-size:24px;font-weight:bold;">${title}</h1>
+      </div>
       ${headerRight}
     </div>
 
-    <div style="margin-top:25px; font-size:13px; color:#6b6963; display:flex; justify-content:space-between; padding:0 4px;">
-      <div>発行日時：${new Date(r.signed_at || r.created_at || Date.now()).toLocaleString('ja-JP')}</div>
-      <div>伝票番号：${r.id || '—'}</div>
-    </div>
-
-    <table style="width:100%; border-collapse:collapse; margin-top:20px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
-      ${[
-        ['案件名', r.project],
-        ['現場名', r.site],
-        ['スタッフ名', r.staff],
-        ['稼働日', r.date],
-        ['稼働時間', (r.hours || '') + ' 時間'],
-        ['備考', r.note || '—']
-      ].map(([label, val], i) => `
-        <tr style="background:${i % 2 === 0 ? '#f9f8f6' : '#ffffff'};">
-          <td style="padding:16px; font-size:14px; color:#6b6963; width:160px; border-bottom:1px solid #e8e7e3; font-weight:500;">${label}</td>
-          <td style="padding:16px; font-size:16px; font-weight:bold; border-bottom:1px solid #e8e7e3; color:#1a1917;">${val || '—'}</td>
-        </tr>
-      `).join('')}
-    </table>
-
-    <div style="margin-top:35px;">
-      <div style="font-size:14px; font-weight:600; color:#6b6963; margin-bottom:10px; padding-left:4px;">お客様ご確認サイン</div>
-      <div style="border:1px dashed #c8c7c3; border-radius:8px; height:180px; display:flex; align-items:center; justify-content:center; background:#fafafa; overflow:hidden;">
-        ${r.sig_data || r.sigData
-          ? `<img src="${r.sig_data || r.sigData}" style="max-width:95%; max-height:95%; object-fit:contain;">`
-          : '<span style="color:#9e9b95; font-size:14px;">サイン受領なし</span>'}
+    <div style="margin-top:20px;display:flex;justify-content:space-between;font-size:12px;color:#6b6963;padding:0 4px;">
+      <div>発行日時：${new Date(r.signed_at||r.created_at||Date.now()).toLocaleString('ja-JP')}</div>
+      <div style="display:flex;gap:20px;">
+        ${r.slip_no ? `<div>伝票No.：<strong style="color:#1a1917;">${r.slip_no}</strong></div>` : ''}
+        <div>ID：${r.id||'—'}</div>
       </div>
     </div>
 
-    <div style="margin-top:50px; border-top:1px solid #e8e7e3; padding-top:20px; display:flex; justify-content:space-between; align-items:center; font-size:13px; color:#9e9b95; padding-left:4px; padding-right:4px;">
-      <div style="display:flex;align-items:center;gap:10px;">
-        ${logoDataUrl ? `<img src="${logoDataUrl}" style="max-height:24px;max-width:80px;object-fit:contain;opacity:0.6;">` : ''}
-        <span style="font-weight:bold; color:#6b6963;">${companyName}</span>
+    <table style="width:100%;border-collapse:collapse;margin-top:16px;">
+      ${[['案件名',r.project],['現場名',r.site],['スタッフ名',r.staff],['稼働日',r.date]].map(([l,v],i)=>`
+        <tr style="background:${i%2===0?'#f9f8f6':'#fff'};">
+          <td style="padding:12px 16px;font-size:13px;color:#6b6963;width:140px;border-bottom:1px solid #e8e7e3;">${l}</td>
+          <td style="padding:12px 16px;font-size:15px;font-weight:bold;border-bottom:1px solid #e8e7e3;">${v||'—'}</td>
+        </tr>`).join('')}
+    </table>
+
+    <div style="margin-top:24px;">
+      <div style="font-size:13px;font-weight:600;color:#6b6963;margin-bottom:8px;">作業時間</div>
+      <table style="width:100%;border-collapse:collapse;">
+        <thead>
+          <tr style="background:#f2f1ee;">
+            <th style="padding:8px;border:1px solid #e8e7e3;font-size:12px;font-weight:500;color:#6b6963;">日付</th>
+            <th style="padding:8px;border:1px solid #e8e7e3;font-size:12px;font-weight:500;color:#6b6963;">名前</th>
+            <th style="padding:8px;border:1px solid #e8e7e3;font-size:12px;font-weight:500;color:#6b6963;">開始</th>
+            <th style="padding:8px;border:1px solid #e8e7e3;font-size:12px;font-weight:500;color:#6b6963;">終了</th>
+            <th style="padding:8px;border:1px solid #e8e7e3;font-size:12px;font-weight:500;color:#6b6963;">休憩</th>
+            <th style="padding:8px;border:1px solid #e8e7e3;font-size:12px;font-weight:500;color:#6b6963;">普通</th>
+            <th style="padding:8px;border:1px solid #e8e7e3;font-size:12px;font-weight:500;color:#6b6963;">深夜</th>
+            <th style="padding:8px;border:1px solid #e8e7e3;font-size:12px;font-weight:500;color:#6b6963;">早朝</th>
+          </tr>
+        </thead>
+        <tbody>${timeTableRows}</tbody>
+        <tfoot>
+          <tr style="background:#f9f8f6;">
+            <td colspan="5" style="padding:10px 16px;border:1px solid #e8e7e3;font-size:13px;font-weight:600;text-align:right;">合計</td>
+            <td style="padding:10px 8px;border:1px solid #e8e7e3;font-size:13px;font-weight:700;text-align:center;">${tNormal.toFixed(1)}h</td>
+            <td style="padding:10px 8px;border:1px solid #e8e7e3;font-size:13px;font-weight:700;text-align:center;">${tLate.toFixed(1)}h</td>
+            <td style="padding:10px 8px;border:1px solid #e8e7e3;font-size:13px;font-weight:700;text-align:center;">${tEarly.toFixed(1)}h</td>
+          </tr>
+          <tr style="background:#1a1917;color:#fff;">
+            <td colspan="7" style="padding:10px 16px;font-size:13px;font-weight:600;text-align:right;border:1px solid #333;">実働合計時間</td>
+            <td style="padding:10px 8px;font-size:16px;font-weight:700;text-align:center;border:1px solid #333;">${tAll.toFixed(1)}h</td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+
+    ${checkedItems.length ? `
+    <div style="margin-top:24px;">
+      <div style="font-size:13px;font-weight:600;color:#6b6963;margin-bottom:8px;">作業内容</div>
+      <div style="display:flex;flex-wrap:wrap;gap:8px;">
+        ${checkedItems.map(label=>`<span style="background:#f2f1ee;border:1px solid #e8e7e3;border-radius:4px;padding:5px 10px;font-size:13px;">✓ ${label}</span>`).join('')}
+      </div>
+    </div>` : ''}
+
+    ${r.note ? `
+    <div style="margin-top:16px;padding:12px 16px;background:#f9f8f6;border-left:3px solid #c8c7c3;border-radius:4px;font-size:13px;color:#1a1917;">
+      <span style="font-size:12px;color:#6b6963;display:block;margin-bottom:4px;">備考</span>${r.note}
+    </div>` : ''}
+
+    ${r.unit_price ? `
+    <div style="margin-top:24px;border:1px solid #e8e7e3;border-radius:6px;overflow:hidden;">
+      <div style="background:#f2f1ee;padding:10px 16px;font-size:13px;font-weight:600;color:#6b6963;">金額明細</div>
+      <table style="width:100%;border-collapse:collapse;">
+        <tr>
+          <td style="padding:10px 16px;font-size:13px;color:#6b6963;border-bottom:1px solid #f2f1ee;">単価</td>
+          <td style="padding:10px 16px;font-size:14px;text-align:right;border-bottom:1px solid #f2f1ee;">${(r.unit_price||0).toLocaleString('ja-JP')}円/h</td>
+        </tr>
+        <tr>
+          <td style="padding:10px 16px;font-size:13px;color:#6b6963;border-bottom:1px solid #f2f1ee;">実働時間</td>
+          <td style="padding:10px 16px;font-size:14px;text-align:right;border-bottom:1px solid #f2f1ee;">${tAll.toFixed(1)}h</td>
+        </tr>
+        <tr style="background:#1a1917;color:#fff;">
+          <td style="padding:12px 16px;font-size:15px;font-weight:bold;">合計金額</td>
+          <td style="padding:12px 16px;font-size:20px;font-weight:bold;text-align:right;">${amount.toLocaleString('ja-JP')}円</td>
+        </tr>
+      </table>
+    </div>` : ''}
+
+    <div style="margin-top:32px;">
+      <div style="font-size:13px;font-weight:600;color:#6b6963;margin-bottom:8px;">お客様ご確認サイン</div>
+      <div style="border:1px dashed #c8c7c3;border-radius:8px;height:160px;display:flex;align-items:center;justify-content:center;background:#fafafa;overflow:hidden;">
+        ${r.sig_data||r.sigData ? `<img src="${r.sig_data||r.sigData}" style="max-width:95%;max-height:95%;object-fit:contain;">` : '<span style="color:#9e9b95;font-size:14px;">サイン受領なし</span>'}
+      </div>
+    </div>
+
+    <div style="margin-top:32px;border-top:1px solid #e8e7e3;padding-top:16px;display:flex;justify-content:space-between;align-items:center;font-size:12px;color:#9e9b95;">
+      <div style="display:flex;align-items:center;gap:8px;">
+        ${logoDataUrl?`<img src="${logoDataUrl}" style="max-height:20px;max-width:70px;object-fit:contain;opacity:0.5;">`:''}
+        <span style="font-weight:600;color:#6b6963;">${companyName}</span>
       </div>
       <div>本書は電子伝票システム(AXIA Sign)により自動発行されました。</div>
     </div>
   `;
 
   document.body.appendChild(container);
-
-  const canvas = await html2canvas(container, {
-    scale: 2,
-    useCORS: true,
-    backgroundColor: '#ffffff'
-  });
+  const canvas = await html2canvas(container, { scale:2, useCORS:true, backgroundColor:'#ffffff' });
   document.body.removeChild(container);
-
   const imgData = canvas.toDataURL('image/jpeg', 0.95);
   const { jsPDF } = window.jspdf;
-  const doc = new jsPDF({ unit: 'mm', format: 'a4' });
-  const imgWidth = 210;
-  const imgHeight = (canvas.height * imgWidth) / canvas.width;
-  doc.addImage(imgData, 'JPEG', 0, 0, imgWidth, imgHeight);
-
+  const doc = new jsPDF({ unit:'mm', format:'a4' });
+  const imgW = 210;
+  const imgH = (canvas.height * imgW) / canvas.width;
+  // 複数ページ対応
+  const pageH = 297;
+  let yPos = 0;
+  while (yPos < imgH) {
+    if (yPos > 0) doc.addPage();
+    doc.addImage(imgData, 'JPEG', 0, -yPos, imgW, imgH);
+    yPos += pageH;
+  }
   if (download) {
-    doc.save('伝票_' + (r.project || '無題') + '_' + (r.date || '') + '.pdf');
+    doc.save('伝票_'+(r.project||'無題')+'_'+(r.date||'')+'.pdf');
     return null;
   }
   return doc.output('datauristring');
