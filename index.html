@@ -1248,81 +1248,84 @@ async function openSignFlow(id) {
     ];
 
     // 時間テーブル
-    const timeTableHTML = timeRows.length ? `
-      <div style="overflow-x:auto;margin-top:4px;">
-        <table style="width:100%;border-collapse:collapse;font-size:12px;min-width:340px;">
-          <thead>
-            <tr style="background:var(--surface2);">
-              <th style="padding:6px;border:0.5px solid var(--border);color:var(--text2);font-weight:500;">日付</th>
-              <th style="padding:6px;border:0.5px solid var(--border);color:var(--text2);font-weight:500;">名前</th>
-              <th style="padding:6px;border:0.5px solid var(--border);color:var(--text2);font-weight:500;">開始</th>
-              <th style="padding:6px;border:0.5px solid var(--border);color:var(--text2);font-weight:500;">終了</th>
-              <th style="padding:6px;border:0.5px solid var(--border);color:var(--text2);font-weight:500;">普通</th>
-              <th style="padding:6px;border:0.5px solid var(--border);color:var(--text2);font-weight:500;">深夜</th>
-              <th style="padding:6px;border:0.5px solid var(--border);color:var(--text2);font-weight:500;">早朝</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${timeRows.map((r,i) => `
-              <tr style="background:${i%2===0?'var(--surface2)':'var(--surface)'}">
-                <td style="padding:6px;border:0.5px solid var(--border);text-align:center;">${r.date||'—'}</td>
-                <td style="padding:6px;border:0.5px solid var(--border);text-align:center;font-weight:500;">${r.name||'—'}</td>
-                <td style="padding:6px;border:0.5px solid var(--border);text-align:center;">${r.start||'—'}</td>
-                <td style="padding:6px;border:0.5px solid var(--border);text-align:center;">${r.end||'—'}</td>
-                <td style="padding:6px;border:0.5px solid var(--border);text-align:center;">${r.normal>0?r.normal.toFixed(1)+'h':'—'}</td>
-                <td style="padding:6px;border:0.5px solid var(--border);text-align:center;">${r.late>0?r.late.toFixed(1)+'h':'—'}</td>
-                <td style="padding:6px;border:0.5px solid var(--border);text-align:center;">${r.early>0?r.early.toFixed(1)+'h':'—'}</td>
-              </tr>`).join('')}
-          </tbody>
-          <tfoot>
-            <tr style="background:var(--surface);">
-              <td colspan="4" style="padding:6px 10px;border:0.5px solid var(--border);font-size:12px;font-weight:600;text-align:right;color:var(--text2);">合計</td>
-              <td style="padding:6px;border:0.5px solid var(--border);text-align:center;font-weight:700;">${tNormal.toFixed(1)}h</td>
-              <td style="padding:6px;border:0.5px solid var(--border);text-align:center;font-weight:700;">${tLate.toFixed(1)}h</td>
-              <td style="padding:6px;border:0.5px solid var(--border);text-align:center;font-weight:700;">${tEarly.toFixed(1)}h</td>
-            </tr>
-            <tr style="background:var(--accent);">
-              <td colspan="6" style="padding:8px 10px;border:0.5px solid var(--border2);font-size:13px;font-weight:600;text-align:right;color:var(--bg);">実働合計</td>
-              <td style="padding:8px 6px;border:0.5px solid var(--border2);text-align:center;font-size:14px;font-weight:700;color:var(--bg);">${tAll.toFixed(1)}h</td>
-            </tr>
-          </tfoot>
-        </table>
-      </div>` : '<span style="font-size:13px;color:var(--text3);">—</span>';
+    let timeTableHTML = '<span style="font-size:13px;color:var(--text3);">—</span>';
+    if (timeRows.length) {
+      let tbRows = '';
+      timeRows.forEach(function(r, i) {
+        tbRows += '<tr style="background:' + (i%2===0?'var(--surface2)':'var(--surface)') + '">'
+          + '<td style="padding:6px;border:0.5px solid var(--border);text-align:center;">' + (r.date||'—') + '</td>'
+          + '<td style="padding:6px;border:0.5px solid var(--border);text-align:center;font-weight:500;">' + (r.name||'—') + '</td>'
+          + '<td style="padding:6px;border:0.5px solid var(--border);text-align:center;">' + (r.start||'—') + '</td>'
+          + '<td style="padding:6px;border:0.5px solid var(--border);text-align:center;">' + (r.end||'—') + '</td>'
+          + '<td style="padding:6px;border:0.5px solid var(--border);text-align:center;">' + (r.normal>0?r.normal.toFixed(1)+'h':'—') + '</td>'
+          + '<td style="padding:6px;border:0.5px solid var(--border);text-align:center;">' + (r.late>0?r.late.toFixed(1)+'h':'—') + '</td>'
+          + '<td style="padding:6px;border:0.5px solid var(--border);text-align:center;">' + (r.early>0?r.early.toFixed(1)+'h':'—') + '</td>'
+          + '</tr>';
+      });
+      timeTableHTML = '<div style="overflow-x:auto;margin-top:4px;">'
+        + '<table style="width:100%;border-collapse:collapse;font-size:12px;min-width:340px;">'
+        + '<thead><tr style="background:var(--surface2);">'
+        + '<th style="padding:6px;border:0.5px solid var(--border);color:var(--text2);font-weight:500;">日付</th>'
+        + '<th style="padding:6px;border:0.5px solid var(--border);color:var(--text2);font-weight:500;">名前</th>'
+        + '<th style="padding:6px;border:0.5px solid var(--border);color:var(--text2);font-weight:500;">開始</th>'
+        + '<th style="padding:6px;border:0.5px solid var(--border);color:var(--text2);font-weight:500;">終了</th>'
+        + '<th style="padding:6px;border:0.5px solid var(--border);color:var(--text2);font-weight:500;">普通</th>'
+        + '<th style="padding:6px;border:0.5px solid var(--border);color:var(--text2);font-weight:500;">深夜</th>'
+        + '<th style="padding:6px;border:0.5px solid var(--border);color:var(--text2);font-weight:500;">早朝</th>'
+        + '</tr></thead>'
+        + '<tbody>' + tbRows + '</tbody>'
+        + '<tfoot>'
+        + '<tr style="background:var(--surface);">'
+        + '<td colspan="4" style="padding:6px 10px;border:0.5px solid var(--border);font-size:12px;font-weight:600;text-align:right;color:var(--text2);">合計</td>'
+        + '<td style="padding:6px;border:0.5px solid var(--border);text-align:center;font-weight:700;">' + tNormal.toFixed(1) + 'h</td>'
+        + '<td style="padding:6px;border:0.5px solid var(--border);text-align:center;font-weight:700;">' + tLate.toFixed(1) + 'h</td>'
+        + '<td style="padding:6px;border:0.5px solid var(--border);text-align:center;font-weight:700;">' + tEarly.toFixed(1) + 'h</td>'
+        + '</tr>'
+        + '<tr style="background:var(--accent);">'
+        + '<td colspan="6" style="padding:8px 10px;border:0.5px solid var(--border2);font-size:13px;font-weight:600;text-align:right;color:var(--bg);">実働合計</td>'
+        + '<td style="padding:8px 6px;border:0.5px solid var(--border2);text-align:center;font-size:14px;font-weight:700;color:var(--bg);">' + tAll.toFixed(1) + 'h</td>'
+        + '</tr>'
+        + '</tfoot></table></div>';
+    }
 
     // チェックリスト
-    const checkedLabels = CHECKLIST_LABELS.filter((_,i) => checks[i]);
-    const checklistHTML = checkedLabels.length
-      ? checkedLabels.map(l => `<span style="display:inline-flex;align-items:center;gap:4px;background:var(--green-bg);color:var(--green-text);border-radius:20px;padding:3px 10px;font-size:12px;font-weight:500;">✓ ${l}</span>`).join(' ')
-      : '<span style="font-size:13px;color:var(--text3);">チェックなし</span>';
+    const checkedLabels = CHECKLIST_LABELS.filter(function(_,i){ return checks[i]; });
+    let checklistHTML = '<span style="font-size:13px;color:var(--text3);">チェックなし</span>';
+    if (checkedLabels.length) {
+      checklistHTML = checkedLabels.map(function(l){
+        return '<span style="display:inline-flex;align-items:center;gap:4px;background:var(--green-bg);color:var(--green-text);border-radius:20px;padding:3px 10px;font-size:12px;font-weight:500;">✓ ' + l + '</span>';
+      }).join(' ');
+    }
 
     // 金額
-    const amountHTML = item.unit_price ? `
-      <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 16px;background:var(--accent);border-radius:var(--radius);margin-top:4px;">
-        <span style="font-size:13px;font-weight:500;color:var(--bg);">合計金額（単価 ${item.unit_price.toLocaleString('ja-JP')}円 × ${tAll.toFixed(1)}h）</span>
-        <span style="font-size:18px;font-weight:700;color:var(--bg);">${amount.toLocaleString('ja-JP')}円</span>
-      </div>` : '';
+    let amountHTML = '';
+    if (item.unit_price) {
+      amountHTML = '<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 16px;background:var(--accent);border-radius:var(--radius);margin-top:4px;">'
+        + '<span style="font-size:13px;font-weight:500;color:var(--bg);">合計金額（単価 ' + item.unit_price.toLocaleString('ja-JP') + '円 × ' + tAll.toFixed(1) + 'h）</span>'
+        + '<span style="font-size:18px;font-weight:700;color:var(--bg);">' + amount.toLocaleString('ja-JP') + '円</span>'
+        + '</div>';
+    }
 
-    document.getElementById('confirm-body').innerHTML = `
-      <div style="border-radius:var(--radius-lg);overflow:hidden;">
-        ${basicRows.map(([l,v],i) => `
-          <div style="display:flex;padding:10px 16px;background:${i%2===0?'var(--surface2)':'var(--surface)'}">
-            <span style="font-size:12px;color:var(--text2);width:80px;flex-shrink:0;padding-top:2px;">${l}</span>
-            <span style="font-size:14px;font-weight:500;">${v||'—'}</span>
-          </div>`).join('')}
-      </div>
+    // 基本情報行
+    let basicHTML = '';
+    basicRows.forEach(function(row, i) {
+      basicHTML += '<div style="display:flex;padding:10px 16px;background:' + (i%2===0?'var(--surface2)':'var(--surface)') + '">'
+        + '<span style="font-size:12px;color:var(--text2);width:80px;flex-shrink:0;padding-top:2px;">' + row[0] + '</span>'
+        + '<span style="font-size:14px;font-weight:500;">' + (row[1]||'—') + '</span>'
+        + '</div>';
+    });
 
-      <div style="margin-top:14px;">
-        <div style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:6px;padding-left:2px;">作業時間</div>
-        ${timeTableHTML}
-      </div>
-
-      <div style="margin-top:14px;">
-        <div style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:6px;padding-left:2px;">作業内容</div>
-        <div style="display:flex;flex-wrap:wrap;gap:6px;">${checklistHTML}</div>
-      </div>
-
-      ${amountHTML}
-    `;
+    document.getElementById('confirm-body').innerHTML =
+      '<div style="border-radius:var(--radius-lg);overflow:hidden;">' + basicHTML + '</div>'
+      + '<div style="margin-top:14px;">'
+      +   '<div style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:6px;padding-left:2px;">作業時間</div>'
+      +   timeTableHTML
+      + '</div>'
+      + '<div style="margin-top:14px;">'
+      +   '<div style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:6px;padding-left:2px;">作業内容</div>'
+      +   '<div style="display:flex;flex-wrap:wrap;gap:6px;">' + checklistHTML + '</div>'
+      + '</div>'
+      + amountHTML;
 
     document.getElementById('sign-step-confirm').style.display = 'flex';
     document.getElementById('sign-step-sign').style.display = 'none';
