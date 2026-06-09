@@ -645,19 +645,88 @@
 <script>
 // ════════════ SUPABASE CONFIG ════════════
 const SB_URL = 'https://unoepkpszkwwctgibavg.supabase.co';
-const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVub2Vwa3Bzemt3d2N0Z2liYXZnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkwMDg2NjQsImV4cCI6MjA5NDU4NDY2NH0.JRnrSI3Q4jNpkiC7EOguhcTIq0OSp42SnlcJPLxtd7U';
+// ✅ anon キー：ブラウザに露出しても安全（RLS が有効な限り他社データにアクセス不可）
+// ⛔ service_role キーは絶対にここに書かない
+const SB_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVub2Vwa3Bzemt3d2N0Z2liYXZnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkwMDg2NjQsImV4cCI6MjA5NDU4NDY2NH0.JRnrSI3Q4jNpkiC7EOguhcTIq0OSp42SnlcJPLxtd7U';
 
+// ── トークン管理 ──────────────────────────────────────────────
+// ログイン済みの場合は JWT アクセストークンを使う。
+// anon キーをそのまま Bearer に使うと RLS の auth.uid() が null になり
+// セキュリティポリシーが機能しないため、必ず JWT を使う。
+let _accessToken  = null;
+let _refreshToken = null;
+let _tokenExpiry  = 0; // Unix秒
+
+function setTokens(access, refresh, expiresIn) {
+  _accessToken  = access;
+  _refreshToken = refresh;
+  _tokenExpiry  = Math.floor(Date.now() / 1000) + (expiresIn || 3600) - 60; // 60秒前に更新
+  // リフレッシュトークンはセッションストレージに保持（ページリロード後も維持）
+  sessionStorage.setItem('axia_rt', refresh);
+}
+
+function clearTokens() {
+  _accessToken = _refreshToken = null;
+  _tokenExpiry = 0;
+  sessionStorage.removeItem('axia_rt');
+}
+
+async function getValidToken() {
+  // トークンが有効期限内ならそのまま返す
+  if (_accessToken && Math.floor(Date.now() / 1000) < _tokenExpiry) {
+    return _accessToken;
+  }
+  // リフレッシュトークンで再取得
+  const rt = _refreshToken || sessionStorage.getItem('axia_rt');
+  if (!rt) return null; // 未ログイン
+
+  try {
+    const res = await fetch(`${SB_URL}/auth/v1/token?grant_type=refresh_token`, {
+      method: 'POST',
+      headers: { 'apikey': SB_ANON_KEY, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ refresh_token: rt })
+    });
+    if (!res.ok) { clearTokens(); return null; }
+    const data = await res.json();
+    setTokens(data.access_token, data.refresh_token, data.expires_in);
+    // currentUser のトークンも更新
+    if (currentUser) {
+      currentUser.token = data.access_token;
+      localStorage.setItem('axia_user', JSON.stringify(currentUser));
+    }
+    return _accessToken;
+  } catch {
+    clearTokens();
+    return null;
+  }
+}
+
+// ── API リクエスト（常に JWT で認証） ─────────────────────────
 async function sbFetch(table, method = 'GET', body = null, query = '') {
+  // JWT を取得（期限切れなら自動リフレッシュ）
+  const token = await getValidToken();
+  if (!token) throw new Error('セッションが切れました。再ログインしてください。');
+
   const res = await fetch(`${SB_URL}/rest/v1/${table}${query}`, {
     method,
     headers: {
-      'apikey': SB_KEY,
-      'Authorization': 'Bearer ' + SB_KEY,
-      'Content-Type': 'application/json',
-      'Prefer': method === 'POST' ? 'return=representation' : method === 'PATCH' ? 'return=representation' : ''
+      'apikey':        SB_ANON_KEY,          // ← 公開鍵（anon）
+      'Authorization': 'Bearer ' + token,    // ← ユーザーの JWT（RLS がここを見る）
+      'Content-Type':  'application/json',
+      'Prefer': method === 'POST' ? 'return=representation'
+              : method === 'PATCH' ? 'return=representation' : ''
     },
     body: body ? JSON.stringify(body) : null
   });
+
+  // 401 = トークン無効 → ログアウトへ誘導
+  if (res.status === 401) {
+    clearTokens();
+    showToast('セッションが切れました。再ログインしてください。');
+    doLogout();
+    throw new Error('Unauthorized');
+  }
+
   if (!res.ok) {
     const errData = await res.json().catch(() => ({}));
     console.error('❌【Supabaseエラー】:', errData);
@@ -693,11 +762,13 @@ async function doLogin() {
   try {
     const res = await fetch(`${SB_URL}/auth/v1/token?grant_type=password`, {
       method: 'POST',
-      headers: { 'apikey': SB_KEY, 'Content-Type': 'application/json' },
+      headers: { 'apikey': SB_ANON_KEY, 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, password: pass })
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error_description || data.msg || 'ログイン失敗');
+    // ✅ JWT アクセストークンとリフレッシュトークンを安全に保持
+    setTokens(data.access_token, data.refresh_token, data.expires_in);
     currentUser = { id: data.user.id, email: data.user.email, name: data.user.user_metadata?.name || email.split('@')[0], company: data.user.user_metadata?.company || '', company_id: data.user.user_metadata?.company_id || data.user.id, token: data.access_token };
     localStorage.setItem('axia_user', JSON.stringify(currentUser));
     hideLoading();
@@ -775,7 +846,7 @@ async function doSignup() {
 
     const res = await fetch(`${SB_URL}/auth/v1/signup`, {
       method: 'POST',
-      headers: { 'apikey': SB_KEY, 'Content-Type': 'application/json' },
+      headers: { 'apikey': SB_ANON_KEY, 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, password: pass, data: { name, company: company_name, company_id } })
     });
     const data = await res.json();
@@ -827,14 +898,16 @@ async function copyInviteCode() {
 async function doLogout() {
   showLoading('ログアウト中...');
   try {
+    const token = _accessToken || currentUser?.token;
     await fetch(`${SB_URL}/auth/v1/logout`, {
       method: 'POST',
-      headers: { 'apikey': SB_KEY, 'Authorization': 'Bearer ' + currentUser?.token }
+      headers: { 'apikey': SB_ANON_KEY, 'Authorization': 'Bearer ' + token }
     });
   } catch(e) {
     // サーバー側でエラーが起きてもスルーして次へ進む
   }
   // サーバーの成否に関わらず、ブラウザの記憶を確実に消去して戻す
+  clearTokens();
   localStorage.removeItem('axia_user');
   currentUser = null;
   document.getElementById('auth-screen').style.display = 'flex';
@@ -1458,15 +1531,18 @@ function logoPath() {
 // Supabaseへアップロード
 async function uploadLogoToStorage(file) {
   const path = logoPath();
+  // ✅ ロゴのアップロードも JWT で認証（RLS ポリシーが自社フォルダのみ許可）
+  const token = await getValidToken();
+  if (!token) throw new Error('セッションが切れました');
   const res = await fetch(
     `${SB_URL}/storage/v1/object/${LOGO_BUCKET}/${path}`,
     {
       method: 'POST',
       headers: {
-        'apikey': SB_KEY,
-        'Authorization': 'Bearer ' + SB_KEY,
-        'Content-Type': file.type,
-        'x-upsert': 'true'   // 上書きOK
+        'apikey':        SB_ANON_KEY,
+        'Authorization': 'Bearer ' + token,
+        'Content-Type':  file.type,
+        'x-upsert':      'true'   // 上書きOK
       },
       body: file
     }
@@ -1477,32 +1553,44 @@ async function uploadLogoToStorage(file) {
   }
 }
 
-// Supabase Storageのロゴ公開URLを取得
-function logoPublicUrl() {
-  return `${SB_URL}/storage/v1/object/public/${LOGO_BUCKET}/${logoPath()}`;
+// Supabase Storage のロゴ取得URL（非公開バケット → 認証付きエンドポイントを使う）
+async function logoAuthenticatedUrl() {
+  const token = await getValidToken();
+  if (!token) return null;
+  // /object/authenticated/ エンドポイントは認証済みユーザーのみアクセス可
+  return `${SB_URL}/storage/v1/object/authenticated/${LOGO_BUCKET}/${logoPath()}`;
 }
 
 // Supabaseからロゴを削除
 async function deleteLogoFromStorage() {
+  const token = await getValidToken();
+  if (!token) throw new Error('セッションが切れました');
   await fetch(
     `${SB_URL}/storage/v1/object/${LOGO_BUCKET}`,
     {
       method: 'DELETE',
       headers: {
-        'apikey': SB_KEY,
-        'Authorization': 'Bearer ' + SB_KEY,
-        'Content-Type': 'application/json'
+        'apikey':        SB_ANON_KEY,
+        'Authorization': 'Bearer ' + token,
+        'Content-Type':  'application/json'
       },
       body: JSON.stringify({ prefixes: [logoPath()] })
     }
   );
 }
 
-// ロゴが存在するか確認（キャッシュバスター付きで読み込み試行）
+// ロゴが存在するか確認（JWT 認証付きで取得）
 async function fetchLogoDataUrl() {
   try {
-    const url = logoPublicUrl() + '?t=' + Date.now();
-    const res = await fetch(url);
+    const token = await getValidToken();
+    if (!token) return null;
+    const url = `${SB_URL}/storage/v1/object/authenticated/${LOGO_BUCKET}/${logoPath()}?t=${Date.now()}`;
+    const res = await fetch(url, {
+      headers: {
+        'apikey':        SB_ANON_KEY,
+        'Authorization': 'Bearer ' + token
+      }
+    });
     if (!res.ok) return null;
     const blob = await res.blob();
     return await new Promise((resolve) => {
@@ -1964,8 +2052,34 @@ function showToast(msg) {
 }
 
 // ════════════ BOOT ════════════
+// ページリロード時にセッションを復元
+// accessToken はメモリのみ（XSS 対策）、refresh token は sessionStorage に保持
 const savedUser = localStorage.getItem('axia_user');
-if (savedUser) { try { currentUser = JSON.parse(savedUser); enterApp(); } catch {} }
+if (savedUser) {
+  try {
+    currentUser = JSON.parse(savedUser);
+    // リフレッシュトークンが残っていれば即座にアクセストークンを取得
+    const rt = sessionStorage.getItem('axia_rt');
+    if (rt) {
+      _refreshToken = rt;
+      getValidToken().then(token => {
+        if (token) { enterApp(); }
+        else {
+          // リフレッシュ失敗 → ログイン画面へ
+          localStorage.removeItem('axia_user');
+          currentUser = null;
+        }
+      });
+    } else {
+      // リフレッシュトークンなし → savedUser のトークンで試行
+      if (currentUser.token) {
+        _accessToken = currentUser.token;
+        _tokenExpiry = Math.floor(Date.now() / 1000) + 600; // 仮に10分
+        enterApp();
+      }
+    }
+  } catch {}
+}
 </script>
 </body>
 </html>
