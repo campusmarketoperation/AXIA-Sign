@@ -299,8 +299,16 @@
           </div>
         </div>
         <div class="form-row">
-          <div class="field"><label>伝票No.</label><input type="text" id="f-slip-no" placeholder="例：031967"></div>
-          <div class="field"><label>稼働日 *</label><input type="date" id="f-date"></div>
+          <div class="field">
+            <label>伝票No. <span style="color:var(--text3);font-weight:400">（自動生成）</span></label>
+            <div style="display:flex;gap:6px;align-items:center;">
+              <input type="text" id="f-slip-no" readonly style="background:var(--surface2);font-family:monospace;font-weight:600;letter-spacing:0.08em;flex:1;color:var(--text);" placeholder="自動生成中...">
+              <button type="button" onclick="manualEditSlipNo()" title="手動で編集" style="flex-shrink:0;background:var(--surface2);border:0.5px solid var(--border2);border-radius:var(--radius);width:34px;height:42px;display:flex;align-items:center;justify-content:center;cursor:pointer;">
+                <svg viewBox="0 0 24 24" fill="none" stroke="var(--text2)" stroke-width="2" width="15" height="15"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+              </button>
+            </div>
+          </div>
+          <div class="field"><label>稼働日 *</label><input type="date" id="f-date" onchange="onDateChange()"></div>
         </div>
         <div class="field">
           <label>元請け企業 <span style="color:var(--text3);font-weight:400">（メール送信先）</span></label>
@@ -1198,6 +1206,73 @@ async function refreshClientSelect() {
   if (prev) sel.value = prev;
 }
 
+// ════════════ SLIP NUMBER GENERATION（伝票番号自動生成）════════════
+// company_id や company名から3文字のプレフィックスを生成
+// 例: "株式会社アクシア" → "AKS"、"co_1234_abcdef" → "ABC"
+function companyPrefix() {
+  // 1) company名（日本語）があればローマ字先頭3文字を試みる
+  const name = (currentUser?.company || '').replace(/[株式会社有限会社合同会社]/g, '').trim();
+  // 2) なければ company_id の英数字部分から3文字
+  const cid = (currentUser?.company_id || '').replace(/[^a-zA-Z0-9]/g, '');
+  // どちらかから大文字3文字を取る
+  const src = (name.replace(/[^ -]/g, '') || cid).toUpperCase().replace(/[^A-Z0-9]/g, '');
+  if (src.length >= 3) return src.slice(0, 3);
+  // 文字数が足りなければ右側を数字で埋める
+  return (src + '000').slice(0, 3);
+}
+
+// YYMMDD-XXX-NNN 形式で伝票番号を生成
+async function generateSlipNo(dateVal) {
+  const d = dateVal || document.getElementById('f-date')?.value || new Date().toISOString().split('T')[0];
+  // YY MM DD
+  const parts = d.split('-');
+  const yy = parts[0].slice(-2);
+  const mm = parts[1] || '00';
+  const dd = parts[2] || '00';
+  const prefix = companyPrefix();
+  const dateStr = yy + mm + dd; // 例: 260610
+
+  // その日付・会社で何件目かをSupabaseから取得
+  try {
+    const rows = await sbFetch('records', 'GET', null,
+      `?company_id=eq.${currentUser.company_id}&date=eq.${d}&select=slip_no&order=created_at.asc`);
+    // sign_queue も含めてカウント（当日作成中のものも考慮）
+    const qrows = await sbFetch('sign_queue', 'GET', null,
+      `?company_id=eq.${currentUser.company_id}&date=eq.${d}&select=slip_no`);
+    const existingCount = (rows?.length || 0) + (qrows?.length || 0);
+    const seq = String(existingCount + 1).padStart(3, '0');
+    return `${dateStr}-${prefix}-${seq}`;
+  } catch {
+    // API失敗時は日時ベースのフォールバック
+    const seq = String(Math.floor(Date.now() / 1000) % 1000).padStart(3, '0');
+    return `${dateStr}-${prefix}-${seq}`;
+  }
+}
+
+function manualEditSlipNo() {
+  const el = document.getElementById('f-slip-no');
+  if (!el) return;
+  if (el.readOnly) {
+    el.readOnly = false;
+    el.style.background = '';
+    el.style.fontFamily = 'monospace';
+    el.focus();
+    el.select();
+    showToast('手動で伝票番号を編集できます');
+  } else {
+    el.readOnly = true;
+    el.style.background = 'var(--surface2)';
+  }
+}
+
+// 稼働日変更時に伝票番号を再生成
+async function onDateChange() {
+  const el = document.getElementById('f-slip-no');
+  if (!el || !el.readOnly) return; // 手動編集中はスキップ
+  el.value = '生成中...';
+  el.value = await generateSlipNo();
+}
+
 // ════════════ FORM DEFAULTS ════════════
 function loadSettings() {
   const s = getSettings();
@@ -1412,7 +1487,9 @@ async function sendToSignQueue() {
 }
 
 function resetForm() {
-  ['f-project','f-note','f-slip-no'].forEach(id => { const el = document.getElementById(id); if(el) el.value = ''; });
+  ['f-project','f-note'].forEach(id => { const el = document.getElementById(id); if(el) el.value = ''; });
+  // 伝票番号はリセット後に再生成（readOnly状態に戻す）
+  const slipEl = document.getElementById('f-slip-no'); if(slipEl){ slipEl.readOnly = true; slipEl.style.background = 'var(--surface2)'; slipEl.value = ''; }
   document.getElementById('f-unit-price').value = '';
   document.getElementById('f-amount').value = '';
   [0,1,2,3,4,5,6,7].forEach(i => { const el = document.getElementById(`chk-${i}`); if(el) el.checked = false; });
@@ -1433,14 +1510,20 @@ async function previewDraft() {
 }
 
 async function setDefaults() {
-  document.getElementById('f-date').value = new Date().toISOString().split('T')[0];
+  const today = new Date().toISOString().split('T')[0];
+  document.getElementById('f-date').value = today;
   const tbody = document.getElementById('time-rows-body');
   if (tbody && !tbody.children.length) {
-    addTimeRow({ date: new Date().toISOString().split('T')[0] });
+    addTimeRow({ date: today });
   }
   await refreshStaffSelect();
   await loadSiteSuggestions();
   await refreshClientSelect();
+  // 伝票番号を自動生成（手動編集中でなければ）
+  const slipEl = document.getElementById('f-slip-no');
+  if (slipEl && slipEl.readOnly) {
+    slipEl.value = await generateSlipNo(today);
+  }
 }
 
 async function renderQueue() {
