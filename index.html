@@ -1217,7 +1217,7 @@ function companyPrefix() {
   // 2) なければ company_id の英数字部分から3文字
   const cid = (currentUser?.company_id || '').replace(/[^a-zA-Z0-9]/g, '');
   // どちらかから大文字3文字を取る
-  const src = (name.replace(/[^ -]/g, '') || cid).toUpperCase().replace(/[^A-Z0-9]/g, '');
+  const src = (name.replace(/[^a-zA-Z0-9]/g, '') || cid).toUpperCase().replace(/[^A-Z0-9]/g, '');
   if (src.length >= 3) return src.slice(0, 3);
   // 文字数が足りなければ右側を数字で埋める
   return (src + '000').slice(0, 3);
