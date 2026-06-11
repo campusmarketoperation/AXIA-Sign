@@ -163,6 +163,9 @@
   .filter-bar { display: flex; gap: 8px; margin-bottom: 14px; overflow-x: auto; padding-bottom: 2px; }
   .filter-chip { flex-shrink: 0; padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: 500; cursor: pointer; border: 0.5px solid var(--border2); background: var(--surface); color: var(--text2); transition: all 0.15s; }
   .filter-chip.active { background: var(--text); color: var(--bg); border-color: var(--text); }
+  .template-btn:hover { border-color: var(--text) !important; background: var(--surface2) !important; transform: translateY(-1px); box-shadow: var(--shadow); }
+  .template-btn:active { transform: scale(0.98) translateY(0); }
+
 
   .search-box { position: relative; margin-bottom: 12px; }
   .search-box input { padding-left: 38px; background: var(--surface); }
@@ -183,8 +186,8 @@
 
     <div id="login-form">
       <div class="field">
-        <label>メールアドレス</label>
-        <input type="email" id="login-email" placeholder="your@company.com" autocomplete="email">
+        <label>ログインID</label>
+        <input type="text" id="login-id" placeholder="例：tanaka" autocomplete="username" style="letter-spacing:0.05em;">
       </div>
       <div class="field">
         <label>パスワード</label>
@@ -192,7 +195,7 @@
       </div>
       <button class="btn btn-primary" onclick="doLogin()" style="margin-top:6px">ログイン</button>
       <p style="text-align:center;font-size:12px;color:var(--text3);margin-top:14px;line-height:1.5;">
-        ※ 初回は必ず「新規登録」からアカウントを作ってください。<br>アドレスは架空（test@test.com等）でOKです。
+        ※ 管理者から発行されたIDでログインしてください。<br>初めての方は「新規登録」から会社を登録してください。
       </p>
     </div>
 
@@ -217,8 +220,8 @@
         <input type="text" id="signup-name" placeholder="田中 太郎">
       </div>
       <div class="field">
-        <label>メールアドレス</label>
-        <input type="email" id="signup-email" placeholder="your@company.com">
+        <label>ログインID <span style="color:var(--text3);font-weight:400">（英数字・ハイフン・アンダーバー使用可）</span></label>
+        <input type="text" id="signup-email" placeholder="例：tanaka または tanaka_taro" autocomplete="username" style="letter-spacing:0.05em;" oninput="this.value=this.value.toLowerCase().replace(/[^a-z0-9_\-]/g,'')">
       </div>
       <div class="field">
         <label>パスワード</label>
@@ -233,6 +236,7 @@
   <div class="topbar">
     <div class="topbar-logo">AXIA Sign</div>
     <div class="topbar-right">
+      <span id="template-badge" style="display:none;align-items:center;font-size:11px;font-weight:600;background:var(--surface2);border:0.5px solid var(--border2);border-radius:20px;padding:4px 10px;cursor:pointer;gap:4px;" onclick="showTemplateSelector()"></span>
       <span class="user-badge" id="user-label"></span>
       <button class="btn btn-ghost btn-sm" onclick="doLogout()">ログアウト</button>
     </div>
@@ -269,7 +273,12 @@
     </div>
 
     <div class="screen" id="screen-new">
-      <div class="page-title">新規伝票作成</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;">
+        <div class="page-title" style="margin-bottom:0;">新規伝票作成</div>
+        <button onclick="showTemplateSelector()" id="template-change-btn" style="background:none;border:0.5px solid var(--border2);border-radius:20px;padding:5px 12px;font-size:12px;font-weight:500;color:var(--text2);cursor:pointer;white-space:nowrap;">
+          <span id="template-change-label">職種を選ぶ</span>
+        </button>
+      </div>
 
       <div class="card">
         <div class="card-title">案件情報</div>
@@ -280,7 +289,8 @@
         <div class="form-row">
           <div class="field">
             <label>現場名 *</label>
-            <input type="text" id="f-site" placeholder="例：〇〇ビル3F">
+            <input type="text" id="f-site" placeholder="例：〇〇ビル3F" list="site-suggestions" autocomplete="off">
+            <datalist id="site-suggestions"></datalist>
           </div>
           <div class="field">
             <label>スタッフ名 *</label>
@@ -291,6 +301,12 @@
         <div class="form-row">
           <div class="field"><label>伝票No.</label><input type="text" id="f-slip-no" placeholder="例：031967"></div>
           <div class="field"><label>稼働日 *</label><input type="date" id="f-date"></div>
+        </div>
+        <div class="field">
+          <label>元請け企業 <span style="color:var(--text3);font-weight:400">（メール送信先）</span></label>
+          <select id="f-client-select">
+            <option value="">── 選択してください（任意）──</option>
+          </select>
         </div>
       </div>
 
@@ -497,21 +513,36 @@
       </div>
 
       <div class="card">
-        <div class="card-title">メール連携</div>
-        <div class="setting-row">
-          <div>
-            <div class="setting-label">Resend API連携</div>
-            <div class="setting-sub">お客様へのPDFメール送信</div>
+        <div class="card-title">メール連携（Resend API）</div>
+        <div class="setting-row" style="align-items:flex-start;padding:14px 0;">
+          <div style="flex:1;">
+            <div class="setting-label">Resend APIキー</div>
+            <div class="setting-sub">re_xxxx... の形式で入力してください</div>
+            <input type="password" id="s-resend-key" placeholder="re_xxxxxxxxxxxxxxxx" style="margin-top:8px;font-family:monospace;font-size:13px;" autocomplete="off">
           </div>
-          <span class="badge badge-blue">近日対応</span>
         </div>
-        <div class="setting-row">
-          <div>
-            <div class="setting-label">SendGrid連携</div>
-            <div class="setting-sub">大量送信・テンプレート管理</div>
+        <div class="setting-row" style="align-items:flex-start;padding:14px 0;">
+          <div style="flex:1;">
+            <div class="setting-label">送信元メールアドレス</div>
+            <div class="setting-sub">Resendで認証済みのドメインのアドレス</div>
+            <input type="email" id="s-resend-from" placeholder="noreply@your-domain.com" style="margin-top:8px;">
           </div>
-          <span class="badge badge-blue">近日対応</span>
         </div>
+        <button class="btn btn-ghost btn-sm" onclick="saveEmailSettings()" style="margin-top:4px;">メール設定を保存</button>
+      </div>
+
+      <div class="card">
+        <div class="card-title">元請け企業マスター</div>
+        <p style="font-size:13px;color:var(--text2);margin-bottom:14px;line-height:1.6;">ここで登録した企業は、伝票送信時のプルダウンに表示されます。現場の隊員はアドレスを入力不要になります。</p>
+        <div style="display:flex;gap:8px;margin-bottom:10px;">
+          <input type="text" id="s-client-name" placeholder="企業名（例：〇〇建設）" style="flex:1;">
+          <input type="email" id="s-client-email" placeholder="送付先メール" style="flex:1;">
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="addClient()" style="width:100%;margin-bottom:12px;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          企業を追加
+        </button>
+        <div id="client-list-settings"></div>
       </div>
 
       <div class="card">
@@ -522,6 +553,18 @@
             <div class="setting-sub">JSON形式でダウンロード</div>
           </div>
           <button class="btn btn-ghost btn-sm" onclick="exportData()">書き出し</button>
+        </div>
+        <div class="setting-row" style="align-items:flex-start;padding:14px 0;">
+          <div style="flex:1;">
+            <div class="setting-label">給与ソフト用CSVエクスポート</div>
+            <div class="setting-sub">フォーマットを選んでワンクリック出力</div>
+            <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;">
+              <button class="btn btn-ghost btn-sm" onclick="exportCSV('kotw')">KING OF TIME</button>
+              <button class="btn btn-ghost btn-sm" onclick="exportCSV('mf')">マネーフォワード</button>
+              <button class="btn btn-ghost btn-sm" onclick="exportCSV('freee')">freee</button>
+              <button class="btn btn-ghost btn-sm" onclick="exportCSV('generic')">汎用CSV</button>
+            </div>
+          </div>
         </div>
         <div class="setting-row">
           <div>
@@ -560,7 +603,13 @@
     <div class="modal-handle"></div>
     <div class="modal-title">PDFをメールで送信</div>
     <div class="field">
-      <label>お客様のメールアドレス</label>
+      <label>送信先（元請け企業）</label>
+      <select id="email-client-select" onchange="onEmailClientChange()">
+        <option value="">── 企業を選択 ──</option>
+      </select>
+    </div>
+    <div class="field" id="email-to-wrap">
+      <label>送信先メールアドレス</label>
       <input type="email" id="email-to" placeholder="customer@example.com">
     </div>
     <div class="field">
@@ -569,11 +618,19 @@
     </div>
     <div class="field">
       <label>本文</label>
-      <textarea id="email-body" rows="4" placeholder="お世話になっております。&#10;作業が完了しましたのでPDFをお送りします。"></textarea>
+      <textarea id="email-body" rows="3" placeholder="お世話になっております。&#10;作業が完了しましたのでPDFをお送りします。"></textarea>
     </div>
+    <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text2);margin-bottom:14px;cursor:pointer;">
+      <input type="checkbox" id="email-cc-hq" style="width:16px;height:16px;accent-color:var(--accent);" checked>
+      本社（送信元アドレス）にも同時送信する
+    </label>
+    <div id="email-status" style="min-height:18px;font-size:12px;margin-bottom:8px;"></div>
     <div class="modal-actions">
       <button class="btn btn-ghost" style="flex:1" onclick="closeModal('email-modal')">キャンセル</button>
-      <button class="btn btn-primary" style="flex:2" onclick="sendEmail()">送信（デモ）</button>
+      <button class="btn btn-primary" style="flex:2" id="email-send-btn" onclick="sendEmail()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+        メールを送信
+      </button>
     </div>
   </div>
 </div>
@@ -588,6 +645,40 @@
 </div>
 
 <div class="toast" id="toast"></div>
+
+<!-- ════════════ TEMPLATE SELECTOR OVERLAY ════════════ -->
+<div id="template-overlay" style="display:none;position:fixed;inset:0;z-index:600;background:var(--bg);flex-direction:column;align-items:center;justify-content:center;padding:2rem 1.5rem;">
+  <div style="width:100%;max-width:480px;">
+    <div style="text-align:center;margin-bottom:2rem;">
+      <div style="font-size:22px;font-weight:700;letter-spacing:-0.5px;margin-bottom:6px;">今日の職種を選んでください</div>
+      <div style="font-size:14px;color:var(--text2);">タップするだけで入力項目が切り替わります</div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:14px;">
+      <button class="template-btn" onclick="selectTemplate('traffic')" style="display:flex;align-items:center;gap:18px;background:var(--surface);border:1.5px solid var(--border2);border-radius:16px;padding:20px 22px;cursor:pointer;transition:all 0.15s;text-align:left;width:100%;">
+        <div style="font-size:36px;flex-shrink:0;">🚦</div>
+        <div>
+          <div style="font-size:17px;font-weight:700;color:var(--text);margin-bottom:3px;">交通誘導</div>
+          <div style="font-size:13px;color:var(--text2);">道路工事・車両誘導・歩行者誘導</div>
+        </div>
+      </button>
+      <button class="template-btn" onclick="selectTemplate('facility')" style="display:flex;align-items:center;gap:18px;background:var(--surface);border:1.5px solid var(--border2);border-radius:16px;padding:20px 22px;cursor:pointer;transition:all 0.15s;text-align:left;width:100%;">
+        <div style="font-size:36px;flex-shrink:0;">🏢</div>
+        <div>
+          <div style="font-size:17px;font-weight:700;color:var(--text);margin-bottom:3px;">施設警備</div>
+          <div style="font-size:13px;color:var(--text2);">ビル・施設・駐車場の巡回・管理</div>
+        </div>
+      </button>
+      <button class="template-btn" onclick="selectTemplate('event')" style="display:flex;align-items:center;gap:18px;background:var(--surface);border:1.5px solid var(--border2);border-radius:16px;padding:20px 22px;cursor:pointer;transition:all 0.15s;text-align:left;width:100%;">
+        <div style="font-size:36px;flex-shrink:0;">🎪</div>
+        <div>
+          <div style="font-size:17px;font-weight:700;color:var(--text);margin-bottom:3px;">イベント</div>
+          <div style="font-size:13px;color:var(--text2);">コンサート・展示会・スポーツイベント</div>
+        </div>
+      </button>
+    </div>
+    <button onclick="selectTemplate(null)" style="margin-top:18px;width:100%;background:none;border:none;font-size:13px;color:var(--text3);cursor:pointer;padding:10px;">テンプレートを使わずに入力する</button>
+  </div>
+</div>
 
 <div id="sign-overlay" style="display:none;position:fixed;inset:0;z-index:500;background:var(--bg);flex-direction:column;">
 
@@ -754,10 +845,16 @@ function switchAuthTab(tab) {
   document.getElementById('signup-form').style.display = tab === 'signup' ? '' : 'none';
 }
 
+// IDをSupabase用ダミーメールに変換（例: tanaka → tanaka@axia-sign.internal）
+function idToEmail(loginId) {
+  return loginId.toLowerCase().replace(/[^a-z0-9_\-]/g, '') + '@axia-sign.internal';
+}
+
 async function doLogin() {
-  const email = document.getElementById('login-email').value.trim();
+  const rawId = (document.getElementById('login-id') || document.getElementById('login-email'))?.value.trim();
   const pass = document.getElementById('login-password').value;
-  if (!email || !pass) { showToast('メールとパスワードを入力してください'); return; }
+  if (!rawId || !pass) { showToast('ログインIDとパスワードを入力してください'); return; }
+  const email = rawId.includes('@') ? rawId : idToEmail(rawId);
   showLoading('ログイン中...');
   try {
     const res = await fetch(`${SB_URL}/auth/v1/token?grant_type=password`, {
@@ -767,9 +864,8 @@ async function doLogin() {
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error_description || data.msg || 'ログイン失敗');
-    // ✅ JWT アクセストークンとリフレッシュトークンを安全に保持
     setTokens(data.access_token, data.refresh_token, data.expires_in);
-    currentUser = { id: data.user.id, email: data.user.email, name: data.user.user_metadata?.name || email.split('@')[0], company: data.user.user_metadata?.company || '', company_id: data.user.user_metadata?.company_id || data.user.id, token: data.access_token };
+    currentUser = { id: data.user.id, email: data.user.email, name: data.user.user_metadata?.name || rawId, company: data.user.user_metadata?.company || '', company_id: data.user.user_metadata?.company_id || data.user.id, token: data.access_token };
     localStorage.setItem('axia_user', JSON.stringify(currentUser));
     hideLoading();
     enterApp();
@@ -815,10 +911,11 @@ async function doSignup() {
   const inviteCode = (document.getElementById('signup-invite')?.value || '').trim().toUpperCase();
   const company    = document.getElementById('signup-company').value.trim();
   const name       = document.getElementById('signup-name').value.trim();
-  const email      = document.getElementById('signup-email').value.trim();
+  const rawId      = document.getElementById('signup-email').value.trim().toLowerCase();
+  const email      = rawId.includes('@') ? rawId : idToEmail(rawId);
   const pass       = document.getElementById('signup-password').value;
 
-  if (!name || !email || !pass) { showToast('お名前・メール・パスワードを入力してください'); return; }
+  if (!name || !rawId || !pass) { showToast('お名前・ログインID・パスワードを入力してください'); return; }
   if (pass.length < 6) { showToast('パスワードは6文字以上にしてください'); return; }
 
   showLoading('アカウント作成中...');
@@ -854,7 +951,7 @@ async function doSignup() {
     hideLoading();
     showToast('登録完了！ログインしてください');
     switchAuthTab('login');
-    document.getElementById('login-email').value = email;
+    const loginIdEl = document.getElementById('login-id') || document.getElementById('login-email'); if(loginIdEl) loginIdEl.value = rawId;
   } catch(e) { hideLoading(); showToast('エラー：' + e.message); }
 }
 
@@ -910,6 +1007,7 @@ async function doLogout() {
   clearTokens();
   localStorage.removeItem('axia_user');
   currentUser = null;
+  _currentTemplate = null;
   document.getElementById('auth-screen').style.display = 'flex';
   document.getElementById('app').style.display = 'none';
   hideLoading();
@@ -932,6 +1030,8 @@ async function enterApp() {
   await updateHome();
   hideLoading();
   setGreeting();
+  // テンプレートがまだ未選択の場合は職種選択オーバーレイを表示
+  if (!_currentTemplate) showTemplateSelector();
 }
 
 function setGreeting() {
@@ -1010,15 +1110,102 @@ function getSelectedStaff() {
   return sel.value;
 }
 
-// ════════════ FORM DEFAULTS ════════════
-async function setDefaults() {
-  document.getElementById('f-date').value = new Date().toISOString().split('T')[0];
-  await refreshStaffSelect();
+// ════════════ TEMPLATE SELECTOR（職種テンプレート）════════════
+const TEMPLATES = {
+  traffic:  { label: '交通誘導', emoji: '🚦', checkLabels: ['工事関係車両・音響の管理', '交互通行', 'その他'] },
+  facility: { label: '施設警備', emoji: '🏢', checkLabels: ['設備の巡回・点検', '一般廃棄物の処理', 'その他'] },
+  event:    { label: 'イベント', emoji: '🎪', checkLabels: ['工事関係車両・音響の管理', 'その他'] },
+};
+
+function showTemplateSelector() {
+  const overlay = document.getElementById('template-overlay');
+  if (overlay) { overlay.style.display = 'flex'; document.body.style.overflow = 'hidden'; }
 }
+
+function selectTemplate(tpl) {
+  _currentTemplate = tpl;
+  const overlay = document.getElementById('template-overlay');
+  if (overlay) { overlay.style.display = 'none'; document.body.style.overflow = ''; }
+
+  // ヘッダーバッジ更新
+  updateTemplateBadge();
+
+  // テンプレートに対応するチェックをあらかじめ ON にする
+  if (tpl && TEMPLATES[tpl]) {
+    const tplChecks = TEMPLATES[tpl].checkLabels;
+    CHECKLIST_LABELS.forEach((label, i) => {
+      const el = document.getElementById('chk-' + i);
+      if (el) el.checked = tplChecks.includes(label);
+    });
+  } else {
+    // テンプレートなし → 全チェックを外す
+    [0,1,2,3,4,5,6,7].forEach(i => {
+      const el = document.getElementById('chk-' + i);
+      if (el) el.checked = false;
+    });
+  }
+
+  // サジェストをテンプレート絞り込みで再ロード
+  loadSiteSuggestions();
+
+  // 新規作成画面に移動
+  switchScreen('new');
+}
+
+function updateTemplateBadge() {
+  const badge = document.getElementById('template-badge');
+  const changeLabel = document.getElementById('template-change-label');
+  if (_currentTemplate && TEMPLATES[_currentTemplate]) {
+    const t = TEMPLATES[_currentTemplate];
+    if (badge) { badge.textContent = t.emoji + ' ' + t.label; badge.style.display = 'inline-flex'; }
+    if (changeLabel) changeLabel.textContent = t.emoji + ' ' + t.label + ' ▾';
+  } else {
+    if (badge) badge.style.display = 'none';
+    if (changeLabel) changeLabel.textContent = '職種を選ぶ';
+  }
+}
+
+// ════════════ SITE SUGGESTIONS（現場名サジェスト）════════════
+let _currentTemplate = null; // 選択中のテンプレート（職種）
+async function loadSiteSuggestions() {
+  const dl = document.getElementById('site-suggestions');
+  if (!dl) return;
+  try {
+    const qs = _currentTemplate
+      ? `?company_id=eq.${currentUser.company_id}&select=site&order=created_at.desc&limit=200`
+      : `?company_id=eq.${currentUser.company_id}&select=site&order=created_at.desc&limit=200`;
+    const rows = await sbFetch('records', 'GET', null, qs);
+    // 重複なし・テンプレートでフィルタ済みのサイト名リスト
+    const seen = new Set();
+    const sites = [];
+    for (const r of rows) {
+      if (!r.site) continue;
+      // テンプレートが選択されていれば一致するもののみ
+      if (_currentTemplate && r.template && r.template !== _currentTemplate) continue;
+      if (!seen.has(r.site)) { seen.add(r.site); sites.push(r.site); }
+    }
+    dl.innerHTML = sites.map(s => `<option value="${s.replace(/"/g,'&quot;')}">`).join('');
+  } catch { /* サジェスト取得失敗はサイレント */ }
+}
+
+async function refreshClientSelect() {
+  const sel = document.getElementById('f-client-select');
+  if (!sel) return;
+  const clients = await fetchClients();
+  const prev = sel.value;
+  sel.innerHTML = '<option value="">── 選択してください（任意）──</option>' +
+    clients.map(c => `<option value="${c.id}" data-email="${c.email}">${c.name}</option>`).join('');
+  if (prev) sel.value = prev;
+}
+
+// ════════════ FORM DEFAULTS ════════════
 function loadSettings() {
   const s = getSettings();
-  if (s.sender) { const el = document.getElementById('s-sender'); if(el) el.value = s.sender; }
+  if (s.sender)     { const el = document.getElementById('s-sender');      if(el) el.value = s.sender; }
+  if (s.resendKey)  { const el = document.getElementById('s-resend-key');  if(el) el.value = s.resendKey; }
+  if (s.resendFrom) { const el = document.getElementById('s-resend-from'); if(el) el.value = s.resendFrom; }
   renderStaffSettings();
+  renderClientSettings();
 }
 function saveSettings() {
   const s = { sender: document.getElementById('s-sender').value.trim() };
@@ -1035,7 +1222,7 @@ async function switchScreen(name) {
   if (name === 'list') await renderList();
   if (name === 'queue') await renderQueue();
   if (name === 'new') await setDefaults();
-  if (name === 'settings') { renderStaffSettings(); loadLogoPreview(); }
+  if (name === 'settings') { renderStaffSettings(); renderClientSettings(); loadLogoPreview(); loadSettings(); }
   window.scrollTo(0, 0);
 }
 
@@ -1096,8 +1283,9 @@ function calcHours(start, end, breakH) {
   const [eh,em] = end.split(':').map(Number);
   let startMin = sh*60+sm, endMin = eh*60+em;
   if (endMin <= startMin) endMin += 24*60; // 日をまたぐ
+  // 休憩時間を差し引いた実働分数（ここで一度だけ引く）
   const workMin = Math.max(0, endMin - startMin - (parseFloat(breakH)||0)*60);
-  // 時間帯区分: 早朝5〜8時、深夜22〜29時(翌5時)
+  // 時間帯区分: 早朝5〜8時、深夜22〜翌5時（29時扱い）
   let normal=0, late=0, early=0;
   for (let m = startMin; m < startMin + workMin; m++) {
     const actual = m % (24*60);
@@ -1105,9 +1293,7 @@ function calcHours(start, end, breakH) {
     else if (actual >= 22*60 || actual < 5*60) late += 1/60;
     else normal += 1/60;
   }
-  // 休憩を普通時間から引く（簡易）
-  const breakH2 = parseFloat(breakH)||0;
-  normal = Math.max(0, normal - breakH2);
+  // ※ 休憩はworkMinで既に除外済みのため、ここでは再減算しない
   return { total: normal+late+early, normal: Math.round(normal*10)/10, late: Math.round(late*10)/10, early: Math.round(early*10)/10 };
 }
 function recalcTime() {
@@ -1175,7 +1361,10 @@ function getFormData() {
     note:       document.getElementById('f-note').value.trim(),
     time_rows:  timeRows,
     checklist:  getChecklist(),
-    unit_price: parseFloat(document.getElementById('f-unit-price').value) || 0,
+    unit_price:   parseFloat(document.getElementById('f-unit-price').value) || 0,
+    client_id:    (() => { const s = document.getElementById('f-client-select'); return s?.value || null; })(),
+    client_name:  (() => { const s = document.getElementById('f-client-select'); return s?.options[s.selectedIndex]?.text || ''; })(),
+    client_email: (() => { const s = document.getElementById('f-client-select'); return s?.options[s.selectedIndex]?.dataset?.email || ''; })(),
   };
 }
 function validate(d) {
@@ -1207,6 +1396,9 @@ async function sendToSignQueue() {
       checklist:  d.checklist,
       unit_price: d.unit_price,
       slip_no:    d.slip_no,
+      client_id:  d.client_id  || null,
+      client_name: d.client_name || '',
+      client_email: d.client_email || '',
     });
     resetForm();
     hideLoading();
@@ -1247,6 +1439,8 @@ async function setDefaults() {
     addTimeRow({ date: new Date().toISOString().split('T')[0] });
   }
   await refreshStaffSelect();
+  await loadSiteSuggestions();
+  await refreshClientSelect();
 }
 
 async function renderQueue() {
@@ -1499,10 +1693,13 @@ async function completeSign() {
       company_id: currentUser.company_id,
       project:    item.project, site: item.site, staff: item.staff,
       date:       item.date, hours: item.hours, note: item.note,
-      time_rows:  item.time_rows  || [],
-      checklist:  item.checklist  || [],
-      unit_price: item.unit_price || 0,
-      slip_no:    item.slip_no    || '',
+      time_rows:  item.time_rows   || [],
+      checklist:  item.checklist   || [],
+      unit_price: item.unit_price  || 0,
+      slip_no:    item.slip_no     || '',
+      client_id:  item.client_id   || null,
+      client_name: item.client_name  || '',
+      client_email: item.client_email || '',
       sig_data:   sigData, has_sig: true,
       signed_at:  new Date().toISOString()
     });
@@ -1969,6 +2166,64 @@ async function openDetail(id) {
   } catch(e) { showToast('エラー：' + e.message); }
 }
 
+// ════════════ CLIENT MASTER（元請け企業マスター）════════════
+async function addClient() {
+  const name  = document.getElementById('s-client-name').value.trim();
+  const email = document.getElementById('s-client-email').value.trim();
+  if (!name || !email) { showToast('企業名とメールアドレスを入力してください'); return; }
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { showToast('正しいメールアドレスを入力してください'); return; }
+  try {
+    await sbFetch('clients', 'POST', { company_id: currentUser.company_id, name, email });
+    document.getElementById('s-client-name').value = '';
+    document.getElementById('s-client-email').value = '';
+    await renderClientSettings();
+    showToast(name + ' を追加しました');
+  } catch(e) { showToast('エラー：' + e.message); }
+}
+
+async function deleteClient(id) {
+  try {
+    await sbFetch('clients', 'DELETE', null, `?id=eq.${id}&company_id=eq.${currentUser.company_id}`);
+    await renderClientSettings();
+    showToast('削除しました');
+  } catch(e) { showToast('エラー：' + e.message); }
+}
+
+async function fetchClients() {
+  try {
+    return await sbFetch('clients', 'GET', null, `?company_id=eq.${currentUser.company_id}&order=name.asc`);
+  } catch { return []; }
+}
+
+async function renderClientSettings() {
+  const clients = await fetchClients();
+  const el = document.getElementById('client-list-settings');
+  if (!el) return;
+  if (!clients.length) {
+    el.innerHTML = '<p style="font-size:13px;color:var(--text3);padding:4px 0;">まだ企業が登録されていません</p>';
+    return;
+  }
+  el.innerHTML = clients.map(c => `
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:9px 0;border-bottom:0.5px solid var(--border)">
+      <div>
+        <div style="font-size:14px;font-weight:500;">${c.name}</div>
+        <div style="font-size:12px;color:var(--text2);">${c.email}</div>
+      </div>
+      <button class="icon-btn" onclick="deleteClient(${c.id})">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/></svg>
+      </button>
+    </div>`).join('');
+}
+
+// ════════════ EMAIL SETTINGS ════════════
+function saveEmailSettings() {
+  const s = getSettings();
+  s.resendKey  = document.getElementById('s-resend-key').value.trim();
+  s.resendFrom = document.getElementById('s-resend-from').value.trim();
+  saveSettingsData(s);
+  showToast('メール設定を保存しました');
+}
+
 // ════════════ EMAIL MODAL ════════════
 async function openEmailModal(id) {
   currentDetailId = id;
@@ -1976,16 +2231,104 @@ async function openEmailModal(id) {
     const rows = await sbFetch('records', 'GET', null, `?id=eq.${id}&company_id=eq.${currentUser.company_id}`);
     const r = rows[0]; if (!r) return;
     document.getElementById('email-subject').value = `作業完了のご報告：${r.project}（${r.date}）`;
-    document.getElementById('email-body').value = `お世話になっております。\n${r.project}の作業が完了しましたので、完了伝票PDFをお送りします。\nご確認のほど、よろしくお願いいたします。`;
+    document.getElementById('email-body').value = `お世話になっております。\n${r.project}（${r.date}）の作業が完了しましたので、完了伝票PDFをお送りします。\nご確認のほど、よろしくお願いいたします。`;
+    document.getElementById('email-status').textContent = '';
+    // 元請けプルダウンを更新
+    const clients = await fetchClients();
+    const sel = document.getElementById('email-client-select');
+    sel.innerHTML = '<option value="">── 企業を選択（または下で直接入力）──</option>' +
+      clients.map(c => `<option value="${c.id}" data-email="${c.email}">${c.name}</option>`).join('');
+    // 伝票に元請けが紐付いていれば自動選択
+    if (r.client_id) {
+      sel.value = r.client_id;
+      onEmailClientChange();
+    } else if (r.client_email) {
+      document.getElementById('email-to').value = r.client_email;
+      document.getElementById('email-to-wrap').style.display = '';
+    } else {
+      sel.value = '';
+      document.getElementById('email-to-wrap').style.display = '';
+      document.getElementById('email-to').value = '';
+    }
     document.getElementById('email-modal').classList.add('open');
-  } catch(e) {}
+  } catch(e) { showToast('エラー：' + e.message); }
 }
-function sendEmail() {
-  const to = document.getElementById('email-to').value.trim();
-  if (!to) { showToast('送信先メールアドレスを入力してください'); return; }
-  closeModal('email-modal');
-  showToast('送信しました（デモモード）');
-  document.getElementById('email-to').value = '';
+
+function onEmailClientChange() {
+  const sel = document.getElementById('email-client-select');
+  const opt = sel.options[sel.selectedIndex];
+  const emailEl = document.getElementById('email-to');
+  const wrap    = document.getElementById('email-to-wrap');
+  if (opt && opt.dataset.email) {
+    emailEl.value = opt.dataset.email;
+    wrap.style.display = 'none'; // 企業選択済みなら手入力欄は隠す
+  } else {
+    emailEl.value = '';
+    wrap.style.display = '';
+  }
+}
+
+async function sendEmail() {
+  const to      = document.getElementById('email-to').value.trim() ||
+                  (() => { const s = document.getElementById('email-client-select'); return s.options[s.selectedIndex]?.dataset?.email || ''; })();
+  const subject = document.getElementById('email-subject').value.trim();
+  const body    = document.getElementById('email-body').value.trim();
+  const ccHq    = document.getElementById('email-cc-hq').checked;
+  const s       = getSettings();
+
+  if (!to) { showToast('送信先を選択または入力してください'); return; }
+  if (!subject) { showToast('件名を入力してください'); return; }
+
+  // Resend APIキーがなければデモ送信
+  if (!s.resendKey || !s.resendFrom) {
+    closeModal('email-modal');
+    showToast('Resend API未設定のためデモ送信（設定画面でAPIキーを登録してください）');
+    return;
+  }
+
+  const statusEl = document.getElementById('email-status');
+  const btn      = document.getElementById('email-send-btn');
+  statusEl.style.color = 'var(--text2)';
+  statusEl.textContent = '送信中...';
+  btn.disabled = true;
+
+  try {
+    // PDFをbase64で生成
+    showLoading('PDF生成中...');
+    const rows = await sbFetch('records', 'GET', null, `?id=eq.${currentDetailId}&company_id=eq.${currentUser.company_id}`);
+    const r = rows[0];
+    const pdfUri = await generatePDF(r, false); // datauri
+    hideLoading();
+    const pdfBase64 = pdfUri.split(',')[1];
+    const filename  = '伝票_' + (r.project||'無題') + '_' + (r.date||'') + '.pdf';
+
+    const payload = {
+      from: s.resendFrom,
+      to:   [to],
+      ...(ccHq ? { cc: [s.resendFrom] } : {}),
+      subject,
+      text: body,
+      attachments: [{ filename, content: pdfBase64 }]
+    };
+
+    const res = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + s.resendKey, 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.message || '送信失敗');
+
+    statusEl.style.color = 'var(--green-text)';
+    statusEl.textContent = '✓ 送信しました（' + to + '）';
+    setTimeout(() => closeModal('email-modal'), 1800);
+    showToast('メールを送信しました');
+  } catch(e) {
+    hideLoading();
+    statusEl.style.color = 'var(--red-text)';
+    statusEl.textContent = '✗ 送信失敗：' + e.message;
+    btn.disabled = false;
+  }
 }
 function closeModal(id) { document.getElementById(id).classList.remove('open'); }
 document.querySelectorAll('.modal-backdrop').forEach(b => {
@@ -2007,6 +2350,114 @@ async function exportData() {
     hideLoading(); showToast('エクスポートしました');
   } catch(e) { hideLoading(); showToast('エラー：' + e.message); }
 }
+// ════════════ CSV EXPORT（給与ソフト対応）════════════
+// 各フォーマット列定義
+const CSV_FORMATS = {
+  kotw: {
+    label: 'KING OF TIME',
+    headers: ['社員番号','氏名','日付','開始時刻','終了時刻','休憩時間(h)','普通時間','深夜時間','早朝時間','実働時間','備考'],
+    row: (r, tr) => [
+      '',                          // 社員番号（未実装）
+      tr.name || r.staff,
+      tr.date || r.date,
+      tr.start,
+      tr.end,
+      tr.break_h || 0,
+      tr.normal || 0,
+      tr.late   || 0,
+      tr.early  || 0,
+      ((tr.normal||0)+(tr.late||0)+(tr.early||0)).toFixed(1),
+      r.note || ''
+    ]
+  },
+  mf: {
+    label: 'マネーフォワード勤怠',
+    headers: ['日付','氏名','出勤時刻','退勤時刻','休憩時間','実労働時間','深夜時間','早朝時間','備考'],
+    row: (r, tr) => [
+      tr.date || r.date,
+      tr.name || r.staff,
+      tr.start,
+      tr.end,
+      tr.break_h || 0,
+      ((tr.normal||0)+(tr.late||0)+(tr.early||0)).toFixed(1),
+      tr.late  || 0,
+      tr.early || 0,
+      r.note || ''
+    ]
+  },
+  freee: {
+    label: 'freee HR',
+    headers: ['従業員名','勤務日','出勤時刻','退勤時刻','休憩(分)','通常労働時間','深夜労働時間','早朝労働時間','メモ'],
+    row: (r, tr) => [
+      tr.name || r.staff,
+      tr.date || r.date,
+      tr.start,
+      tr.end,
+      Math.round((parseFloat(tr.break_h)||0)*60),
+      ((tr.normal||0)+(tr.late||0)+(tr.early||0)).toFixed(1),
+      tr.late  || 0,
+      tr.early || 0,
+      r.note || ''
+    ]
+  },
+  generic: {
+    label: '汎用CSV',
+    headers: ['案件名','現場名','担当者','日付','開始','終了','休憩(h)','普通(h)','深夜(h)','早朝(h)','実働(h)','伝票No','備考'],
+    row: (r, tr) => [
+      r.project,
+      r.site,
+      tr.name || r.staff,
+      tr.date || r.date,
+      tr.start,
+      tr.end,
+      tr.break_h || 0,
+      tr.normal  || 0,
+      tr.late    || 0,
+      tr.early   || 0,
+      ((tr.normal||0)+(tr.late||0)+(tr.early||0)).toFixed(1),
+      r.slip_no || '',
+      r.note    || ''
+    ]
+  }
+};
+
+function csvEscape(v) {
+  const s = String(v ?? '');
+  return (s.includes(',') || s.includes('"') || s.includes('\n')) ? '"' + s.replace(/"/g, '""') + '"' : s;
+}
+
+async function exportCSV(format) {
+  const fmt = CSV_FORMATS[format];
+  if (!fmt) return;
+  showLoading(fmt.label + ' 形式でエクスポート中...');
+  try {
+    const records = await sbFetch('records', 'GET', null,
+      `?company_id=eq.${currentUser.company_id}&order=date.desc`);
+
+    const lines = [fmt.headers.map(csvEscape).join(',')];
+    for (const r of records) {
+      const timeRows = r.time_rows || [];
+      if (timeRows.length) {
+        for (const tr of timeRows) lines.push(fmt.row(r, tr).map(csvEscape).join(','));
+      } else {
+        // time_rowsがない古いレコードは1行で出力
+        lines.push(fmt.row(r, { name: r.staff, date: r.date, start: '', end: '', break_h: 0,
+          normal: r.hours||0, late: 0, early: 0 }).map(csvEscape).join(','));
+      }
+    }
+
+    // BOM付きUTF-8（Excelで文字化けしないため）
+    const bom = '\uFEFF';
+    const blob = new Blob([bom + lines.join('\n')], { type: 'text/csv;charset=utf-8;' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'axia_' + format + '_' + new Date().toISOString().split('T')[0] + '.csv';
+    a.click();
+    hideLoading();
+    showToast(fmt.label + ' 形式でエクスポートしました（' + (lines.length-1) + '行）');
+  } catch(e) { hideLoading(); showToast('エラー：' + e.message); }
+}
+
 async function clearAllData() {
   if (!confirm('すべてのデータを削除しますか？\nこの操作は取り消せません。')) return;
   showLoading('削除中...');
