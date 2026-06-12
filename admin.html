@@ -188,7 +188,7 @@
           <div class="card-title">最近の伝票（直近20件）</div>
         </div>
         <table>
-          <thead><tr><th>会社ID</th><th>案件名</th><th>現場名</th><th>先方名</th><th>稼働日</th><th>実働</th><th>署名</th><th>伝票No.</th></tr></thead>
+          <thead><tr><th>会社名</th><th>案件名</th><th>現場名</th><th>先方名</th><th>稼働日</th><th>実働</th><th>署名</th><th>伝票No.</th></tr></thead>
           <tbody id="dash-recent-body"></tbody>
         </table>
       </div>
@@ -196,16 +196,34 @@
 
     <!-- 契約会社管理 -->
     <div class="screen" id="screen-companies">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
         <div class="page-title" style="margin:0;">契約会社管理</div>
         <button class="btn btn-primary btn-sm" onclick="openAddCompanyModal()">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
           会社を追加
         </button>
       </div>
+      <div class="card" style="margin-bottom:14px;">
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+          <input type="text" id="co-search" placeholder="会社名・会社IDで絞り込み" style="flex:1;min-width:180px;" oninput="renderCompanies()">
+          <select id="co-plan-filter" onchange="renderCompanies()" style="width:130px;">
+            <option value="">プラン：全て</option>
+            <option value="light">ライト</option>
+            <option value="standard">スタンダード</option>
+            <option value="premium">プレミアム</option>
+          </select>
+          <select id="co-status-filter" onchange="renderCompanies()" style="width:120px;">
+            <option value="">状態：全て</option>
+            <option value="active">アクティブ</option>
+            <option value="banned">停止中</option>
+          </select>
+          <button class="btn btn-ghost btn-sm" onclick="clearCompanyFilter()">リセット</button>
+        </div>
+        <div id="co-count" style="font-size:12px;color:var(--text2);margin-top:8px;"></div>
+      </div>
       <div class="card" style="padding:0;overflow:hidden;">
         <table>
-          <thead><tr><th>会社名</th><th>会社ID</th><th>プラン</th><th>伝票数</th><th>最終利用</th><th>ロゴ</th><th>操作</th></tr></thead>
+          <thead><tr><th>会社名</th><th>プラン</th><th>伝票数</th><th>最終利用</th><th>状態</th><th>ロゴ</th><th>操作</th></tr></thead>
           <tbody id="companies-body"></tbody>
         </table>
       </div>
@@ -215,17 +233,29 @@
     <div class="screen" id="screen-records">
       <div class="page-title">全伝票閲覧</div>
       <div class="card" style="margin-bottom:16px;">
-        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
-          <input type="text" id="rec-search" placeholder="会社ID・案件名・現場名で絞り込み" style="flex:1;min-width:200px;" oninput="renderAllRecords()">
-          <input type="date" id="rec-date-from" onchange="renderAllRecords()" style="width:140px;">
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+          <input type="text" id="rec-search" placeholder="会社名・案件名・現場名・先方名・伝票No." style="flex:2;min-width:200px;" oninput="renderAllRecords()">
+          <select id="rec-sig-filter" onchange="renderAllRecords()" style="width:110px;">
+            <option value="">署名：全て</option>
+            <option value="signed">署名済み</option>
+            <option value="unsigned">未署名</option>
+          </select>
+          <select id="rec-plan-filter" onchange="renderAllRecords()" style="width:120px;">
+            <option value="">プラン：全て</option>
+            <option value="light">ライト</option>
+            <option value="standard">スタンダード</option>
+            <option value="premium">プレミアム</option>
+          </select>
+          <input type="date" id="rec-date-from" onchange="renderAllRecords()" style="width:132px;">
           <span style="color:var(--text3);font-size:12px;">〜</span>
-          <input type="date" id="rec-date-to" onchange="renderAllRecords()" style="width:140px;">
+          <input type="date" id="rec-date-to" onchange="renderAllRecords()" style="width:132px;">
           <button class="btn btn-ghost btn-sm" onclick="clearRecordFilter()">リセット</button>
         </div>
+        <div id="rec-count" style="font-size:12px;color:var(--text2);margin-top:8px;"></div>
       </div>
       <div class="card" style="padding:0;overflow:hidden;">
         <table>
-          <thead><tr><th>会社ID</th><th>伝票No.</th><th>案件名</th><th>現場名</th><th>先方名</th><th>稼働日</th><th>実働</th><th>署名</th><th>作成日</th></tr></thead>
+          <thead><tr><th>会社名</th><th>伝票No.</th><th>案件名</th><th>現場名</th><th>先方名</th><th>稼働日</th><th>実働</th><th>署名</th><th>作成日</th><th>操作</th></tr></thead>
           <tbody id="all-records-body"></tbody>
         </table>
       </div>
@@ -246,9 +276,22 @@
 <div class="modal-overlay" id="add-company-modal">
   <div class="modal-box">
     <div class="modal-title">会社を追加</div>
-    <div class="field"><label>会社名 *</label><input type="text" id="m-company-name" placeholder="株式会社〇〇警備"></div>
-    <div class="field"><label>管理者ログインID *</label><input type="text" id="m-admin-id" placeholder="例：yamada" style="letter-spacing:0.05em;" oninput="this.value=this.value.toLowerCase().replace(/[^a-z0-9_-]/g,'')"></div>
-    <div class="field"><label>初期パスワード *</label><input type="password" id="m-admin-pass" placeholder="8文字以上推奨"></div>
+    <div class="field"><label>会社名 *</label><input type="text" id="m-company-name" placeholder="株式会社〇〇警備" oninput="autoGenLoginId()"></div>
+    <div class="field">
+      <label>管理者ログインID <span style="color:var(--text3);font-weight:400">（自動生成・変更可）</span></label>
+      <div style="display:flex;gap:6px;">
+        <input type="text" id="m-admin-id" placeholder="例：yamada" style="letter-spacing:0.05em;flex:1;" oninput="this.value=this.value.toLowerCase().replace(/[^a-z0-9_-]/g,'')">
+        <button type="button" class="btn btn-ghost btn-sm" onclick="autoGenLoginId(true)" style="flex-shrink:0;">再生成</button>
+      </div>
+    </div>
+    <div class="field">
+      <label>初期パスワード <span style="color:var(--text3);font-weight:400">（自動生成）</span></label>
+      <div style="display:flex;gap:6px;">
+        <input type="text" id="m-admin-pass" placeholder="自動生成されます" style="flex:1;font-family:monospace;" readonly>
+        <button type="button" class="btn btn-ghost btn-sm" onclick="genPassword()" style="flex-shrink:0;">再生成</button>
+      </div>
+      <div style="font-size:11px;color:var(--text3);margin-top:4px;">※ 会社担当者にこのパスワードを共有してください</div>
+    </div>
     <div class="field">
       <label>プラン</label>
       <select id="m-plan">
@@ -257,9 +300,22 @@
         <option value="premium">プレミアム（¥50,000〜/月）</option>
       </select>
     </div>
+    <div id="m-result" style="display:none;background:var(--green-bg);border-radius:8px;padding:10px 14px;font-size:12px;color:var(--green-text);margin-top:4px;line-height:1.8;"></div>
     <div class="modal-actions">
       <button class="btn btn-ghost" onclick="closeModal('add-company-modal')">キャンセル</button>
-      <button class="btn btn-primary" onclick="addCompany()">会社を作成</button>
+      <button class="btn btn-primary" id="add-company-btn" onclick="addCompany()">会社を作成</button>
+    </div>
+  </div>
+</div>
+
+<!-- 垢バン確認モーダル -->
+<div class="modal-overlay" id="ban-modal">
+  <div class="modal-box">
+    <div class="modal-title" style="color:var(--red-text);">⚠️ アカウントを停止</div>
+    <p id="ban-modal-msg" style="font-size:13px;color:var(--text2);margin-bottom:20px;line-height:1.6;"></p>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('ban-modal')">キャンセル</button>
+      <button class="btn btn-danger" onclick="executeBan()">停止する</button>
     </div>
   </div>
 </div>
@@ -424,10 +480,11 @@ async function loadDashboard() {
     document.getElementById('dash-queue').textContent = queue.length;
 
     // 最近20件
+    const savedNames = JSON.parse(localStorage.getItem('axia_company_names') || '{}');
     const tbody = document.getElementById('dash-recent-body');
     tbody.innerHTML = records.slice(0, 20).map(r => `
       <tr>
-        <td style="font-family:monospace;font-size:11px;">${r.company_id?.slice(0,12)||'—'}</td>
+        <td><div style="font-weight:500;font-size:12px;">${savedNames[r.company_id]||'—'}</div><div style="font-size:10px;color:var(--text3);font-family:monospace;">${r.company_id?.slice(0,14)||''}</div></td>
         <td>${r.project||'—'}</td>
         <td>${r.site||'—'}</td>
         <td>${r.staff||'—'}</td>
@@ -447,7 +504,6 @@ async function loadCompanies() {
   showLoading('会社情報を読み込み中...');
   try {
     const records = await sbAll('records', '?select=company_id,created_at&order=created_at.desc');
-    // company_id ごとに集計
     const map = {};
     for (const r of records) {
       if (!r.company_id) continue;
@@ -455,49 +511,76 @@ async function loadCompanies() {
       map[r.company_id].count++;
       if (r.created_at > map[r.company_id].last) map[r.company_id].last = r.created_at;
     }
-    // staff テーブルから会社名を取得
-    const staffRows = await sbAll('staff', '?select=company_id&order=created_at.asc');
-    const companyNames = {};
-    // users の metadata から company 名を取得するのはanon keyでは不可のため
-    // ローカルストレージに保存した情報を利用
-    const savedNames = JSON.parse(localStorage.getItem('axia_company_names') || '{}');
-
     allCompanies = Object.values(map).sort((a,b) => b.last > a.last ? 1 : -1);
-
-    // ロゴ情報をlocalStorageから取得
-    const logos = JSON.parse(localStorage.getItem('axia_logos') || '{}');
-    // プラン情報
-    const plans = JSON.parse(localStorage.getItem('axia_plans') || '{}');
-
-    const tbody = document.getElementById('companies-body');
-    tbody.innerHTML = allCompanies.map(c => {
-      const plan = plans[c.company_id] || 'standard';
-      const planLabel = { light: 'ライト', standard: 'スタンダード', premium: 'プレミアム' }[plan];
-      const planClass = { light: 'plan-light', standard: 'plan-standard', premium: 'plan-premium' }[plan];
-      const hasLogo = !!logos[c.company_id];
-      const name = savedNames[c.company_id] || '—';
-      return `
-      <tr>
-        <td><div style="font-weight:500;">${name}</div><div style="font-size:11px;color:var(--text3);font-family:monospace;">${c.company_id}</div></td>
-        <td style="font-family:monospace;font-size:11px;">${c.company_id}</td>
-        <td><span class="badge ${planClass}">${planLabel}</span></td>
-        <td>${c.count}件</td>
-        <td style="font-size:11px;color:var(--text2);">${c.last ? new Date(c.last).toLocaleDateString('ja-JP') : '—'}</td>
-        <td>${hasLogo ? '<span class="badge badge-green">✓ 設定済</span>' : '<span class="badge badge-gray">未設定</span>'}</td>
-        <td>
-          <div style="display:flex;gap:6px;">
-            <button class="btn btn-ghost btn-xs" onclick="openLogoDirect('${c.company_id}','${name}')">ロゴ</button>
-            <select onchange="changePlan('${c.company_id}',this.value)" style="font-size:11px;padding:3px 6px;width:100px;">
-              <option value="light" ${plan==='light'?'selected':''}>ライト</option>
-              <option value="standard" ${plan==='standard'?'selected':''}>スタンダード</option>
-              <option value="premium" ${plan==='premium'?'selected':''}>プレミアム</option>
-            </select>
-          </div>
-        </td>
-      </tr>`;
-    }).join('');
+    renderCompanies();
   } catch(e) { showToast('エラー: ' + e.message); }
   hideLoading();
+}
+
+function renderCompanies() {
+  const query      = (document.getElementById('co-search')?.value || '').toLowerCase();
+  const planFilter = document.getElementById('co-plan-filter')?.value || '';
+  const statusFilter = document.getElementById('co-status-filter')?.value || '';
+  const savedNames = JSON.parse(localStorage.getItem('axia_company_names') || '{}');
+  const logos      = JSON.parse(localStorage.getItem('axia_logos') || '{}');
+  const plans      = JSON.parse(localStorage.getItem('axia_plans') || '{}');
+  const banned     = JSON.parse(localStorage.getItem('axia_banned') || '{}');
+
+  let filtered = allCompanies.filter(c => {
+    const name = savedNames[c.company_id] || '';
+    const matchText = !query || name.toLowerCase().includes(query) || c.company_id.toLowerCase().includes(query);
+    const matchPlan = !planFilter || (plans[c.company_id] || 'standard') === planFilter;
+    const isBanned  = !!banned[c.company_id];
+    const matchStatus = !statusFilter || (statusFilter === 'banned' ? isBanned : !isBanned);
+    return matchText && matchPlan && matchStatus;
+  });
+
+  const countEl = document.getElementById('co-count');
+  if (countEl) countEl.textContent = `${filtered.length} 社`;
+
+  const tbody = document.getElementById('companies-body');
+  tbody.innerHTML = filtered.map(c => {
+    const plan      = plans[c.company_id] || 'standard';
+    const planLabel = { light: 'ライト', standard: 'スタンダード', premium: 'プレミアム' }[plan];
+    const planClass = { light: 'plan-light', standard: 'plan-standard', premium: 'plan-premium' }[plan];
+    const hasLogo   = !!logos[c.company_id];
+    const name      = savedNames[c.company_id] || '—';
+    const isBanned  = !!banned[c.company_id];
+    return `
+    <tr style="${isBanned ? 'opacity:0.5;background:#fff5f5;' : ''}">
+      <td>
+        <div style="font-weight:500;font-size:13px;">${name}</div>
+        <div style="font-size:10px;color:var(--text3);font-family:monospace;">${c.company_id}</div>
+      </td>
+      <td><span class="badge ${planClass}">${planLabel}</span></td>
+      <td>${c.count}件</td>
+      <td style="font-size:11px;color:var(--text2);">${c.last ? new Date(c.last).toLocaleDateString('ja-JP') : '—'}</td>
+      <td>${isBanned
+        ? '<span class="badge badge-red">停止中</span>'
+        : '<span class="badge badge-green">アクティブ</span>'}</td>
+      <td>${hasLogo ? '<span class="badge badge-green">✓</span>' : '<span class="badge badge-gray">未</span>'}</td>
+      <td>
+        <div style="display:flex;gap:5px;flex-wrap:wrap;">
+          <button class="btn btn-ghost btn-xs" onclick="openLogoDirect('${c.company_id}','${name.replace(/'/g,"\'")}')">ロゴ</button>
+          <select onchange="changePlan('${c.company_id}',this.value)" style="font-size:11px;padding:3px 6px;width:96px;border-radius:6px;border:1px solid var(--border2);">
+            <option value="light"    ${plan==='light'   ?'selected':''}>ライト</option>
+            <option value="standard" ${plan==='standard'?'selected':''}>スタンダード</option>
+            <option value="premium"  ${plan==='premium' ?'selected':''}>プレミアム</option>
+          </select>
+          ${isBanned
+            ? `<button class="btn btn-ghost btn-xs" style="color:var(--green-text);" onclick="unbanCompany('${c.company_id}','${name.replace(/'/g,"\'")}')">解除</button>`
+            : `<button class="btn btn-xs" style="background:var(--red-bg);color:var(--red-text);border:none;" onclick="confirmBan('${c.company_id}','${name.replace(/'/g,"\'")}')">停止</button>`}
+        </div>
+      </td>
+    </tr>`;
+  }).join('') || '<tr><td colspan="7" style="text-align:center;color:var(--text3);padding:20px;">該当なし</td></tr>';
+}
+
+function clearCompanyFilter() {
+  document.getElementById('co-search').value = '';
+  document.getElementById('co-plan-filter').value = '';
+  document.getElementById('co-status-filter').value = '';
+  renderCompanies();
 }
 
 function changePlan(companyId, plan) {
@@ -505,18 +588,77 @@ function changePlan(companyId, plan) {
   plans[companyId] = plan;
   localStorage.setItem('axia_plans', JSON.stringify(plans));
   showToast('プランを変更しました');
+  renderCompanies();
 }
 
-function openAddCompanyModal() { openModal('add-company-modal'); }
+// ── 垢バン
+let banTargetId = null;
+function confirmBan(companyId, name) {
+  banTargetId = companyId;
+  document.getElementById('ban-modal-msg').textContent =
+    `「${name}」のアカウントを停止します。この会社のユーザーはログインできなくなります。よろしいですか？`;
+  openModal('ban-modal');
+}
+function executeBan() {
+  if (!banTargetId) return;
+  const banned = JSON.parse(localStorage.getItem('axia_banned') || '{}');
+  banned[banTargetId] = { at: new Date().toISOString() };
+  localStorage.setItem('axia_banned', JSON.stringify(banned));
+  closeModal('ban-modal');
+  banTargetId = null;
+  showToast('アカウントを停止しました');
+  renderCompanies();
+}
+function unbanCompany(companyId, name) {
+  const banned = JSON.parse(localStorage.getItem('axia_banned') || '{}');
+  delete banned[companyId];
+  localStorage.setItem('axia_banned', JSON.stringify(banned));
+  showToast(`「${name}」の停止を解除しました`);
+  renderCompanies();
+}
+
+function openAddCompanyModal() {
+  // モーダルを開くたびにリセット＆自動生成
+  document.getElementById('m-company-name').value = '';
+  document.getElementById('m-admin-id').value = '';
+  document.getElementById('m-result').style.display = 'none';
+  document.getElementById('add-company-btn').disabled = false;
+  genPassword();
+  openModal('add-company-modal');
+}
+
+// 会社名からローマ字ログインIDを自動生成
+function autoGenLoginId(force = false) {
+  const nameEl = document.getElementById('m-company-name');
+  const idEl   = document.getElementById('m-admin-id');
+  if (!force && idEl.value) return; // 手動入力済みなら上書きしない
+  const name = nameEl.value.trim();
+  if (!name) return;
+  // ひらがな・カタカナ・漢字は除去してローマ字部分だけ残し、最大12文字
+  const base = name.replace(/[　-鿿]/g, '').replace(/[^a-zA-Z0-9]/g, '').toLowerCase().slice(0, 10);
+  const suffix = Math.floor(10 + Math.random() * 90);
+  idEl.value = (base || 'company') + suffix;
+}
+
+function genPassword() {
+  const chars = 'abcdefghjkmnpqrstuvwxyzABCDEFGHJKMNPQRSTUVWXYZ23456789!@#';
+  let pass = '';
+  for (let i = 0; i < 12; i++) pass += chars[Math.floor(Math.random() * chars.length)];
+  document.getElementById('m-admin-pass').value = pass;
+}
 
 async function addCompany() {
-  const name    = document.getElementById('m-company-name').value.trim();
-  const rawId   = document.getElementById('m-admin-id').value.trim();
-  const pass    = document.getElementById('m-admin-pass').value;
-  const plan    = document.getElementById('m-plan').value;
+  const name  = document.getElementById('m-company-name').value.trim();
+  let rawId   = document.getElementById('m-admin-id').value.trim();
+  const pass  = document.getElementById('m-admin-pass').value;
+  const plan  = document.getElementById('m-plan').value;
   if (!name || !rawId || !pass) { showToast('全項目を入力してください'); return; }
   if (pass.length < 6) { showToast('パスワードは6文字以上にしてください'); return; }
 
+  // IDが空なら自動生成
+  if (!rawId) { autoGenLoginId(true); rawId = document.getElementById('m-admin-id').value.trim(); }
+
+  document.getElementById('add-company-btn').disabled = true;
   showLoading('会社を作成中...');
   try {
     const email      = rawId + '@axia-sign.internal';
@@ -537,11 +679,28 @@ async function addCompany() {
     names[company_id] = name;
     localStorage.setItem('axia_company_names', JSON.stringify(names));
 
-    closeModal('add-company-modal');
     hideLoading();
-    showToast(`${name} を追加しました（ID: ${rawId}）`);
-    loadCompanies();
-  } catch(e) { hideLoading(); showToast('エラー: ' + e.message); }
+
+    // 成功：認証情報をモーダル内に表示
+    const resultEl = document.getElementById('m-result');
+    resultEl.innerHTML = `
+      ✅ <strong>${name}</strong> を作成しました。<br>
+      以下の情報を担当者に共有してください。<br><br>
+      <strong>ログインID：</strong><code style="background:#d1fae5;padding:2px 6px;border-radius:4px;">${rawId}</code><br>
+      <strong>パスワード：</strong><code style="background:#d1fae5;padding:2px 6px;border-radius:4px;">${pass}</code><br>
+      <strong>会社ID：</strong><code style="font-size:10px;color:#6b6963;">${company_id}</code>
+    `;
+    resultEl.style.display = '';
+    // ボタンをクローズに切り替え
+    document.getElementById('add-company-btn').textContent = '閉じる';
+    document.getElementById('add-company-btn').onclick = () => { closeModal('add-company-modal'); loadCompanies(); };
+    document.getElementById('add-company-btn').disabled = false;
+    showToast(`${name} を作成しました`);
+  } catch(e) {
+    hideLoading();
+    document.getElementById('add-company-btn').disabled = false;
+    showToast('エラー: ' + e.message);
+  }
 }
 
 // ════════════════════════════════════════
@@ -562,25 +721,37 @@ function renderAllRecords() {
   const from   = document.getElementById('rec-date-from').value;
   const to     = document.getElementById('rec-date-to').value;
 
+  const _sn = JSON.parse(localStorage.getItem('axia_company_names') || '{}');
+  const sigFilter  = (document.getElementById('rec-sig-filter')?.value || '');
+  const planFilter2 = (document.getElementById('rec-plan-filter')?.value || '');
+  const plans2 = JSON.parse(localStorage.getItem('axia_plans') || '{}');
   let filtered = allRecords.filter(r => {
+    const companyName = (_sn[r.company_id]||'').toLowerCase();
     const matchText = !query ||
+      companyName.includes(query) ||
       (r.company_id||'').toLowerCase().includes(query) ||
       (r.project||'').toLowerCase().includes(query) ||
       (r.site||'').toLowerCase().includes(query) ||
-      (r.staff||'').toLowerCase().includes(query);
-    const matchFrom = !from || (r.date||'') >= from;
-    const matchTo   = !to   || (r.date||'') <= to;
-    return matchText && matchFrom && matchTo;
+      (r.staff||'').toLowerCase().includes(query) ||
+      (r.slip_no||'').toLowerCase().includes(query);
+    const matchFrom   = !from || (r.date||'') >= from;
+    const matchTo     = !to   || (r.date||'') <= to;
+    const matchSig    = !sigFilter || (sigFilter==='signed' ? r.has_sig : !r.has_sig);
+    const matchPlan   = !planFilter2 || (plans2[r.company_id]||'standard') === planFilter2;
+    return matchText && matchFrom && matchTo && matchSig && matchPlan;
   });
+  const countEl2 = document.getElementById('rec-count');
+  if (countEl2) countEl2.textContent = `${filtered.length} 件`;
 
   const total = filtered.length;
   const start = recPage * REC_PER_PAGE;
   const page  = filtered.slice(start, start + REC_PER_PAGE);
 
+  const _names = JSON.parse(localStorage.getItem('axia_company_names') || '{}');
   const tbody = document.getElementById('all-records-body');
   tbody.innerHTML = page.map(r => `
     <tr>
-      <td style="font-family:monospace;font-size:11px;">${r.company_id?.slice(0,14)||'—'}</td>
+      <td><div style="font-size:12px;font-weight:500;">${_names[r.company_id]||'—'}</div><div style="font-size:10px;color:var(--text3);font-family:monospace;">${r.company_id?.slice(0,14)||''}</div></td>
       <td style="font-family:monospace;font-size:11px;">${r.slip_no||'—'}</td>
       <td>${r.project||'—'}</td>
       <td>${r.site||'—'}</td>
