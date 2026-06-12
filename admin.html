@@ -121,9 +121,9 @@
     <h2>AXIA Sign</h2>
     <p style="margin-bottom:6px;">運営管理画面</p>
     <div style="background:var(--amber-bg);border-radius:8px;padding:10px 14px;font-size:12px;color:var(--amber-text);margin-bottom:20px;">
-      ⚠️ 運営スタッフ専用です。IDとパスワードを入力してください。
+      ⚠️ 運営スタッフ専用です。管理者アカウントでログインしてください。
     </div>
-    <div class="field"><label>管理者ID</label><input type="text" id="admin-id" placeholder="admin" autocomplete="username"></div>
+    <div class="field"><label>メールアドレス</label><input type="email" id="admin-email" placeholder="admin@axia-sign.internal" autocomplete="username"></div>
     <div class="field"><label>パスワード</label><input type="password" id="admin-pass" placeholder="••••••••" autocomplete="current-password"></div>
     <button class="btn btn-primary" onclick="doAdminLogin()" style="width:100%;justify-content:center;margin-top:4px;">ログイン</button>
   </div>
@@ -296,12 +296,11 @@
 const SB_URL     = 'https://unoepkpszkwwctgibavg.supabase.co';
 const SB_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVub2Vwa3Bzemt3d2N0Z2liYXZnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkwMDg2NjQsImV4cCI6MjA5NDU4NDY2NH0.JRnrSI3Q4jNpkiC7EOguhcTIq0OSp42SnlcJPLxtd7U';
 
-// 運営管理者の認証情報（本番ではSupabaseのadminロールへ移行推奨）
-const ADMIN_CREDENTIALS = [
-  { id: 'axia_admin', pass: 'AXIAsign2025!', name: '運営管理者' },
-];
+// 管理者メールアドレス（このリストに含まれるメールのみ管理画面に入れる）
+const ADMIN_EMAILS = ['admin@axia-sign.internal'];
 
 let adminUser = null;
+let adminToken = null;
 let allCompanies = [];  // company_id の重複排除リスト
 let allRecords = [];
 let recPage = 0;
@@ -338,20 +337,47 @@ function switchScreen(name, btn) {
 // ════════════════════════════════════════
 // 認証
 // ════════════════════════════════════════
-function doAdminLogin() {
-  const id   = document.getElementById('admin-id').value.trim();
-  const pass = document.getElementById('admin-pass').value;
-  const found = ADMIN_CREDENTIALS.find(c => c.id === id && c.pass === pass);
-  if (!found) { showToast('IDまたはパスワードが違います'); return; }
-  adminUser = found;
-  document.getElementById('auth-overlay').style.display = 'none';
-  document.getElementById('main-layout').style.display = 'flex';
-  document.getElementById('admin-name-display').textContent = found.name;
-  loadDashboard();
+async function doAdminLogin() {
+  const email = document.getElementById('admin-email').value.trim();
+  const pass  = document.getElementById('admin-pass').value;
+  if (!email || !pass) { showToast('メールとパスワードを入力してください'); return; }
+
+  showLoading('認証中...');
+  try {
+    const res = await fetch(`${SB_URL}/auth/v1/token?grant_type=password`, {
+      method: 'POST',
+      headers: { 'apikey': SB_ANON_KEY, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password: pass })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error_description || 'ログイン失敗');
+
+    // 管理者メールかチェック
+    if (!ADMIN_EMAILS.includes(email)) {
+      hideLoading();
+      showToast('このアカウントに管理者権限がありません');
+      return;
+    }
+
+    adminToken = data.access_token;
+    adminUser = { email, name: '運営管理者' };
+    document.getElementById('auth-overlay').style.display = 'none';
+    document.getElementById('main-layout').style.display = 'flex';
+    document.getElementById('admin-name-display').textContent = email;
+    hideLoading();
+    loadDashboard();
+  } catch(e) { hideLoading(); showToast('エラー: ' + e.message); }
 }
 
-function doAdminLogout() {
+async function doAdminLogout() {
+  try {
+    await fetch(`${SB_URL}/auth/v1/logout`, {
+      method: 'POST',
+      headers: { 'apikey': SB_ANON_KEY, 'Authorization': 'Bearer ' + adminToken }
+    });
+  } catch {}
   adminUser = null;
+  adminToken = null;
   document.getElementById('auth-overlay').style.display = 'flex';
   document.getElementById('main-layout').style.display = 'none';
 }
@@ -362,11 +388,11 @@ document.getElementById('admin-pass').addEventListener('keydown', e => { if (e.k
 // Supabase fetch（service_role keyなしのため anon keyで全社取得）
 // ════════════════════════════════════════
 async function sbAll(table, query = '') {
-  // RLSをバイパスするため Prefer: resolution=merge-duplicates + rangeヘッダーで全件取得
+  const token = adminToken || SB_ANON_KEY;
   const res = await fetch(`${SB_URL}/rest/v1/${table}${query}`, {
     headers: {
       'apikey': SB_ANON_KEY,
-      'Authorization': 'Bearer ' + SB_ANON_KEY,
+      'Authorization': 'Bearer ' + token,
       'Content-Type': 'application/json',
       'Prefer': 'return=representation',
       'Range': '0-9999',
