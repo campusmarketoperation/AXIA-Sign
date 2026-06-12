@@ -258,9 +258,9 @@
             <datalist id="site-suggestions"></datalist>
           </div>
           <div class="field">
-            <label>スタッフ名 *</label>
+            <label>先方名 *</label>
             <select id="f-staff-select" onchange="onStaffSelectChange()"></select>
-            <input type="text" id="f-staff-new" placeholder="スタッフ名を入力" style="display:none;margin-top:8px">
+            <input type="text" id="f-staff-new" placeholder="先方担当者名を入力" style="display:none;margin-top:8px">
           </div>
         </div>
         <div class="form-row">
@@ -395,7 +395,7 @@
         <div class="search-icon">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
         </div>
-        <input type="text" id="search-input" placeholder="案件名・現場名・スタッフ名で検索..." oninput="renderList()">
+        <input type="text" id="search-input" placeholder="案件名・現場名・先方名で検索..." oninput="renderList()">
       </div>
 
       <div class="filter-bar">
@@ -432,29 +432,19 @@
 
       <div class="card">
         <div class="card-title">PDF設定</div>
-        <div class="setting-row" style="align-items:flex-start;padding:16px 0;">
-          <div style="flex:1">
-            <div class="setting-label">会社ロゴ</div>
-            <div class="setting-sub">PDFヘッダーの右上に表示されます<br>PNG・JPG・SVG（推奨サイズ：横300px以内）</div>
-            <div id="logo-preview-wrap" style="display:none;margin-top:12px;">
-              <img id="logo-preview-img" style="max-height:48px;max-width:180px;object-fit:contain;border-radius:4px;background:var(--surface2);padding:4px;">
-              <button onclick="removeLogo()" style="display:block;margin-top:8px;background:none;border:none;font-size:12px;color:var(--red-text);cursor:pointer;">ロゴを削除</button>
-            </div>
-          </div>
-          <div style="flex-shrink:0;margin-left:16px;">
-            <label for="logo-file-input" class="btn btn-ghost btn-sm" style="cursor:pointer;white-space:nowrap;">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-              アップロード
-            </label>
-            <input type="file" id="logo-file-input" accept="image/*" style="display:none" onchange="onLogoSelected(this)">
-          </div>
-        </div>
         <div class="setting-row">
           <div>
             <div class="setting-label">印刷レイアウト</div>
-            <div class="setting-sub">A4縦</div>
+            <div class="setting-sub">A4縦・1枚</div>
           </div>
           <span class="badge badge-green">A4</span>
+        </div>
+        <div class="setting-row">
+          <div>
+            <div class="setting-label">会社ロゴ</div>
+            <div class="setting-sub">ロゴの設定は運営が行います</div>
+          </div>
+          <span class="badge" style="background:var(--surface2);color:var(--text2);">運営設定</span>
         </div>
       </div>
 
@@ -877,7 +867,7 @@ async function refreshStaffSelect() {
   if (!sel) return;
   const prev = sel.value;
   sel.innerHTML = '';
-  const newOpt = document.createElement('option'); newOpt.value = '__new__'; newOpt.textContent = '＋ 新規スタッフ（手入力）'; sel.appendChild(newOpt);
+  const newOpt = document.createElement('option'); newOpt.value = '__new__'; newOpt.textContent = '＋ 手入力'; sel.appendChild(newOpt);
   list.forEach(name => { const opt = document.createElement('option'); opt.value = name; opt.textContent = name; sel.appendChild(opt); });
   if (prev && prev !== '__new__' && list.includes(prev)) sel.value = prev;
   else if (list.length > 0) sel.value = list[0];
@@ -1224,7 +1214,7 @@ function getFormData() {
 function validate(d) {
   if (!d.project) { showToast('案件名を入力してください'); return false; }
   if (!d.site)    { showToast('現場名を入力してください'); return false; }
-  if (!d.staff)   { showToast('スタッフ名を入力してください'); return false; }
+  if (!d.staff)   { showToast('先方名を入力してください'); return false; }
   if (!d.date)    { showToast('稼働日を入力してください'); return false; }
   if (!d.time_rows.length) { showToast('作業時間を1行以上入力してください'); return false; }
   return true;
@@ -1368,7 +1358,7 @@ async function openSignFlow(id) {
     const basicRows = [
       ['案件名',   item.project],
       ['現場名',   item.site],
-      ['スタッフ', item.staff],
+      ['先方名', item.staff],
       ['稼働日',   item.date],
       ...(item.slip_no ? [['伝票No.', item.slip_no]] : []),
       ...(item.note    ? [['備考',    item.note]]    : []),
@@ -1712,7 +1702,7 @@ async function loadLogoPreview() {
 
 async function generatePDF(r, download) {
   const container = document.createElement('div');
-  container.style.cssText = 'width:760px;padding:40px;background:#ffffff;color:#1a1917;font-family:sans-serif;position:fixed;top:-9999px;left:0;line-height:1.6;';
+  container.style.cssText = 'width:794px;padding:20px 24px;background:#ffffff;color:#1a1917;font-family:sans-serif;position:fixed;top:-9999px;left:0;line-height:1.4;box-sizing:border-box;';
   const s = getSettings();
   const title = r.has_sig ? '作業完了伝票' : '作業完了伝票（控え）';
   const logoDataUrl = await getLogoDataUrl();
@@ -1736,14 +1726,14 @@ async function generatePDF(r, download) {
   // 時間行テーブル
   const timeTableRows = rows.length ? rows.map(row=>`
     <tr>
-      <td style="padding:8px;border:1px solid #e8e7e3;font-size:13px;text-align:center;">${row.date||'—'}</td>
-      <td style="padding:8px;border:1px solid #e8e7e3;font-size:13px;text-align:center;font-weight:500;">${row.name||'—'}</td>
-      <td style="padding:8px;border:1px solid #e8e7e3;font-size:13px;text-align:center;">${row.start||'—'}</td>
-      <td style="padding:8px;border:1px solid #e8e7e3;font-size:13px;text-align:center;">${row.end||'—'}</td>
-      <td style="padding:8px;border:1px solid #e8e7e3;font-size:13px;text-align:center;">${row.break_h||0}h</td>
-      <td style="padding:8px;border:1px solid #e8e7e3;font-size:13px;text-align:center;font-weight:600;">${row.normal>0?row.normal.toFixed(1)+'h':'—'}</td>
-      <td style="padding:8px;border:1px solid #e8e7e3;font-size:13px;text-align:center;font-weight:600;">${row.late>0?row.late.toFixed(1)+'h':'—'}</td>
-      <td style="padding:8px;border:1px solid #e8e7e3;font-size:13px;text-align:center;font-weight:600;">${row.early>0?row.early.toFixed(1)+'h':'—'}</td>
+      <td style="padding:5px 6px;border:1px solid #e8e7e3;font-size:10px;text-align:center;">${row.date||'—'}</td>
+      <td style="padding:5px 6px;border:1px solid #e8e7e3;font-size:10px;text-align:center;font-weight:500;">${row.name||'—'}</td>
+      <td style="padding:5px 6px;border:1px solid #e8e7e3;font-size:10px;text-align:center;">${row.start||'—'}</td>
+      <td style="padding:5px 6px;border:1px solid #e8e7e3;font-size:10px;text-align:center;">${row.end||'—'}</td>
+      <td style="padding:5px 6px;border:1px solid #e8e7e3;font-size:10px;text-align:center;">${row.break_h||0}h</td>
+      <td style="padding:5px 6px;border:1px solid #e8e7e3;font-size:10px;text-align:center;font-weight:600;">${row.normal>0?row.normal.toFixed(1)+'h':'—'}</td>
+      <td style="padding:5px 6px;border:1px solid #e8e7e3;font-size:10px;text-align:center;font-weight:600;">${row.late>0?row.late.toFixed(1)+'h':'—'}</td>
+      <td style="padding:5px 6px;border:1px solid #e8e7e3;font-size:10px;text-align:center;font-weight:600;">${row.early>0?row.early.toFixed(1)+'h':'—'}</td>
     </tr>`).join('') : `<tr><td colspan="8" style="padding:12px;border:1px solid #e8e7e3;text-align:center;color:#9e9b95;font-size:13px;">—</td></tr>`;
 
   container.innerHTML = `
@@ -1764,7 +1754,7 @@ async function generatePDF(r, download) {
     </div>
 
     <table style="width:100%;border-collapse:collapse;margin-top:16px;">
-      ${[['案件名',r.project],['現場名',r.site],['スタッフ名',r.staff],['稼働日',r.date]].map(([l,v],i)=>`
+      ${[['案件名',r.project],['現場名',r.site],['先方名',r.staff],['稼働日',r.date]].map(([l,v],i)=>`
         <tr style="background:${i%2===0?'#f9f8f6':'#fff'};">
           <td style="padding:12px 16px;font-size:13px;color:#6b6963;width:140px;border-bottom:1px solid #e8e7e3;">${l}</td>
           <td style="padding:12px 16px;font-size:15px;font-weight:bold;border-bottom:1px solid #e8e7e3;">${v||'—'}</td>
@@ -2003,7 +1993,7 @@ async function openDetail(id) {
     const r = rows[0]; if (!r) return;
     document.getElementById('detail-title').textContent = r.project || '（無題）';
     const rowsData = [
-      ['現場名', r.site], ['スタッフ', r.staff], ['稼働日', r.date],
+      ['現場名', r.site], ['先方名', r.staff], ['稼働日', r.date],
       ['稼働時間', (r.hours||'') + ' 時間'], ['備考', r.note || '—'],
       ['サイン', r.has_sig ? 'あり' : 'なし'],
       ['サイン日時', r.signed_at ? new Date(r.signed_at).toLocaleString('ja-JP') : '—'],

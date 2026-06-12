@@ -1,0 +1,681 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AXIA Sign — 運営管理画面</title>
+<style>
+  :root {
+    --bg: #f5f4f0; --surface: #ffffff; --surface2: #f2f1ee;
+    --border: #e8e7e3; --border2: #d4d3cf;
+    --text: #1a1917; --text2: #6b6963; --text3: #9e9b95;
+    --accent: #1a1917; --accent-hover: #333;
+    --red: #dc2626; --red-bg: #fef2f2; --red-text: #dc2626;
+    --green: #16a34a; --green-bg: #f0fdf4; --green-text: #16a34a;
+    --blue-bg: #eff6ff; --blue-text: #2563eb;
+    --amber-bg: #fffbeb; --amber-text: #d97706;
+    --radius: 10px; --shadow: 0 1px 4px rgba(0,0,0,0.08);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: -apple-system, 'Hiragino Sans', sans-serif; font-size: 14px; min-height: 100vh; }
+
+  /* Layout */
+  .layout { display: flex; min-height: 100vh; }
+  .sidebar { width: 220px; background: var(--text); color: #fff; flex-shrink: 0; display: flex; flex-direction: column; position: fixed; top: 0; left: 0; height: 100vh; z-index: 100; }
+  .sidebar-logo { padding: 22px 20px 16px; border-bottom: 1px solid rgba(255,255,255,0.1); }
+  .sidebar-logo .name { font-size: 16px; font-weight: 700; }
+  .sidebar-logo .sub { font-size: 10px; opacity: 0.5; letter-spacing: 1px; margin-top: 2px; }
+  .sidebar-nav { flex: 1; padding: 12px 0; overflow-y: auto; }
+  .nav-item { display: flex; align-items: center; gap: 10px; padding: 10px 20px; font-size: 13px; cursor: pointer; transition: background 0.15s; color: rgba(255,255,255,0.7); border: none; background: none; width: 100%; text-align: left; }
+  .nav-item:hover { background: rgba(255,255,255,0.08); color: #fff; }
+  .nav-item.active { background: rgba(255,255,255,0.15); color: #fff; font-weight: 600; }
+  .sidebar-footer { padding: 16px 20px; border-top: 1px solid rgba(255,255,255,0.1); font-size: 11px; color: rgba(255,255,255,0.4); }
+  .main { margin-left: 220px; flex: 1; padding: 28px 32px; max-width: 1100px; }
+
+  /* Auth overlay */
+  #auth-overlay { position: fixed; inset: 0; background: var(--bg); z-index: 200; display: flex; align-items: center; justify-content: center; }
+  .auth-box { background: var(--surface); border-radius: 16px; padding: 36px; width: 360px; box-shadow: var(--shadow); }
+  .auth-box h2 { font-size: 18px; margin-bottom: 4px; }
+  .auth-box p { font-size: 12px; color: var(--text2); margin-bottom: 24px; }
+
+  /* Cards & Tables */
+  .page-title { font-size: 20px; font-weight: 700; margin-bottom: 20px; }
+  .stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 24px; }
+  .stat-card { background: var(--surface); border-radius: var(--radius); padding: 18px; box-shadow: var(--shadow); }
+  .stat-val { font-size: 28px; font-weight: 700; line-height: 1; }
+  .stat-label { font-size: 12px; color: var(--text2); margin-top: 4px; }
+  .stat-sub { font-size: 11px; color: var(--text3); margin-top: 2px; }
+  .card { background: var(--surface); border-radius: var(--radius); padding: 20px; box-shadow: var(--shadow); margin-bottom: 16px; }
+  .card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+  .card-title { font-size: 14px; font-weight: 600; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th { padding: 8px 12px; background: var(--surface2); text-align: left; font-weight: 500; color: var(--text2); font-size: 11px; border-bottom: 1px solid var(--border); white-space: nowrap; }
+  td { padding: 10px 12px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: var(--surface2); }
+
+  /* Form elements */
+  .field { margin-bottom: 14px; }
+  label { display: block; font-size: 12px; font-weight: 500; margin-bottom: 5px; color: var(--text2); }
+  input[type=text], input[type=email], input[type=password], input[type=date], select, textarea {
+    width: 100%; padding: 9px 12px; border: 1px solid var(--border2); border-radius: 8px;
+    font-size: 13px; background: var(--bg); color: var(--text); outline: none; transition: border 0.15s;
+  }
+  input:focus, select:focus, textarea:focus { border-color: var(--text); }
+
+  /* Buttons */
+  .btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; border-radius: 8px; font-size: 13px; font-weight: 500; cursor: pointer; border: none; transition: all 0.15s; }
+  .btn-primary { background: var(--text); color: #fff; }
+  .btn-primary:hover { background: var(--accent-hover); }
+  .btn-ghost { background: var(--surface2); color: var(--text); border: 0.5px solid var(--border2); }
+  .btn-ghost:hover { background: var(--border); }
+  .btn-danger { background: var(--red-bg); color: var(--red-text); border: 0.5px solid #fca5a5; }
+  .btn-danger:hover { background: #fee2e2; }
+  .btn-sm { padding: 5px 12px; font-size: 12px; }
+  .btn-xs { padding: 3px 8px; font-size: 11px; border-radius: 6px; }
+
+  /* Badges */
+  .badge { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 20px; font-size: 11px; font-weight: 500; }
+  .badge-green { background: var(--green-bg); color: var(--green-text); }
+  .badge-red { background: var(--red-bg); color: var(--red-text); }
+  .badge-blue { background: var(--blue-bg); color: var(--blue-text); }
+  .badge-amber { background: var(--amber-bg); color: var(--amber-text); }
+  .badge-gray { background: var(--surface2); color: var(--text2); }
+
+  /* Plan chips */
+  .plan-light { background: #f0fdf4; color: #16a34a; }
+  .plan-standard { background: #eff6ff; color: #2563eb; }
+  .plan-premium { background: #faf5ff; color: #7c3aed; }
+
+  /* Modal */
+  .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 300; align-items: center; justify-content: center; }
+  .modal-overlay.open { display: flex; }
+  .modal-box { background: var(--surface); border-radius: 16px; padding: 28px; width: 480px; max-width: 95vw; box-shadow: 0 8px 40px rgba(0,0,0,0.18); }
+  .modal-title { font-size: 16px; font-weight: 700; margin-bottom: 20px; }
+  .modal-actions { display: flex; gap: 8px; margin-top: 20px; justify-content: flex-end; }
+
+  /* Toast */
+  #toast { position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%) translateY(20px); background: var(--text); color: #fff; padding: 10px 20px; border-radius: 30px; font-size: 13px; opacity: 0; pointer-events: none; transition: all 0.25s; z-index: 999; white-space: nowrap; }
+  #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  /* Screens */
+  .screen { display: none; }
+  .screen.active { display: block; }
+
+  /* Loading */
+  #loading { display: none; position: fixed; inset: 0; background: rgba(245,244,240,0.7); z-index: 400; align-items: center; justify-content: center; flex-direction: column; gap: 12px; }
+  #loading.show { display: flex; }
+  .spinner { width: 28px; height: 28px; border: 3px solid var(--border); border-top-color: var(--text); border-radius: 50%; animation: spin 0.7s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+
+<!-- ローディング -->
+<div id="loading"><div class="spinner"></div><div id="loading-msg" style="font-size:13px;color:var(--text2);">読み込み中...</div></div>
+<div id="toast"></div>
+
+<!-- 認証オーバーレイ -->
+<div id="auth-overlay">
+  <div class="auth-box">
+    <h2>AXIA Sign</h2>
+    <p style="margin-bottom:6px;">運営管理画面</p>
+    <div style="background:var(--amber-bg);border-radius:8px;padding:10px 14px;font-size:12px;color:var(--amber-text);margin-bottom:20px;">
+      ⚠️ 運営スタッフ専用です。IDとパスワードを入力してください。
+    </div>
+    <div class="field"><label>管理者ID</label><input type="text" id="admin-id" placeholder="admin" autocomplete="username"></div>
+    <div class="field"><label>パスワード</label><input type="password" id="admin-pass" placeholder="••••••••" autocomplete="current-password"></div>
+    <button class="btn btn-primary" onclick="doAdminLogin()" style="width:100%;justify-content:center;margin-top:4px;">ログイン</button>
+  </div>
+</div>
+
+<!-- メインレイアウト -->
+<div class="layout" id="main-layout" style="display:none;">
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <div class="name">AXIA Sign</div>
+      <div class="sub">ADMIN PANEL</div>
+    </div>
+    <nav class="sidebar-nav">
+      <button class="nav-item active" onclick="switchScreen('dashboard',this)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+        ダッシュボード
+      </button>
+      <button class="nav-item" onclick="switchScreen('companies',this)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+        契約会社管理
+      </button>
+      <button class="nav-item" onclick="switchScreen('records',this)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        全伝票閲覧
+      </button>
+      <button class="nav-item" onclick="switchScreen('logos',this)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+        ロゴ管理
+      </button>
+    </nav>
+    <div class="sidebar-footer">
+      <div id="admin-name-display" style="margin-bottom:6px;color:rgba(255,255,255,0.6);font-size:12px;"></div>
+      <button onclick="doAdminLogout()" style="background:none;border:none;color:rgba(255,255,255,0.4);font-size:11px;cursor:pointer;padding:0;">ログアウト</button>
+    </div>
+  </aside>
+
+  <main class="main">
+
+    <!-- ダッシュボード -->
+    <div class="screen active" id="screen-dashboard">
+      <div class="page-title">ダッシュボード</div>
+      <div class="stats-row">
+        <div class="stat-card">
+          <div class="stat-val" id="dash-companies">—</div>
+          <div class="stat-label">契約会社数</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-val" id="dash-records">—</div>
+          <div class="stat-label">総伝票数</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-val" id="dash-signed">—</div>
+          <div class="stat-label">署名済み伝票</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-val" id="dash-queue">—</div>
+          <div class="stat-label">サイン待ち件数</div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">最近の伝票（直近20件）</div>
+        </div>
+        <table>
+          <thead><tr><th>会社ID</th><th>案件名</th><th>現場名</th><th>先方名</th><th>稼働日</th><th>実働</th><th>署名</th><th>伝票No.</th></tr></thead>
+          <tbody id="dash-recent-body"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- 契約会社管理 -->
+    <div class="screen" id="screen-companies">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+        <div class="page-title" style="margin:0;">契約会社管理</div>
+        <button class="btn btn-primary btn-sm" onclick="openAddCompanyModal()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          会社を追加
+        </button>
+      </div>
+      <div class="card" style="padding:0;overflow:hidden;">
+        <table>
+          <thead><tr><th>会社名</th><th>会社ID</th><th>プラン</th><th>伝票数</th><th>最終利用</th><th>ロゴ</th><th>操作</th></tr></thead>
+          <tbody id="companies-body"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- 全伝票閲覧 -->
+    <div class="screen" id="screen-records">
+      <div class="page-title">全伝票閲覧</div>
+      <div class="card" style="margin-bottom:16px;">
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+          <input type="text" id="rec-search" placeholder="会社ID・案件名・現場名で絞り込み" style="flex:1;min-width:200px;" oninput="renderAllRecords()">
+          <input type="date" id="rec-date-from" onchange="renderAllRecords()" style="width:140px;">
+          <span style="color:var(--text3);font-size:12px;">〜</span>
+          <input type="date" id="rec-date-to" onchange="renderAllRecords()" style="width:140px;">
+          <button class="btn btn-ghost btn-sm" onclick="clearRecordFilter()">リセット</button>
+        </div>
+      </div>
+      <div class="card" style="padding:0;overflow:hidden;">
+        <table>
+          <thead><tr><th>会社ID</th><th>伝票No.</th><th>案件名</th><th>現場名</th><th>先方名</th><th>稼働日</th><th>実働</th><th>署名</th><th>作成日</th></tr></thead>
+          <tbody id="all-records-body"></tbody>
+        </table>
+      </div>
+      <div id="rec-pager" style="margin-top:12px;display:flex;gap:8px;justify-content:center;"></div>
+    </div>
+
+    <!-- ロゴ管理 -->
+    <div class="screen" id="screen-logos">
+      <div class="page-title">ロゴ管理</div>
+      <p style="font-size:13px;color:var(--text2);margin-bottom:16px;line-height:1.6;">会社ごとにロゴを設定します。設定したロゴはその会社が出力するPDFのヘッダーに反映されます。</p>
+      <div id="logo-company-list"></div>
+    </div>
+
+  </main>
+</div>
+
+<!-- 会社追加モーダル -->
+<div class="modal-overlay" id="add-company-modal">
+  <div class="modal-box">
+    <div class="modal-title">会社を追加</div>
+    <div class="field"><label>会社名 *</label><input type="text" id="m-company-name" placeholder="株式会社〇〇警備"></div>
+    <div class="field"><label>管理者ログインID *</label><input type="text" id="m-admin-id" placeholder="例：yamada" style="letter-spacing:0.05em;" oninput="this.value=this.value.toLowerCase().replace(/[^a-z0-9_-]/g,'')"></div>
+    <div class="field"><label>初期パスワード *</label><input type="password" id="m-admin-pass" placeholder="8文字以上推奨"></div>
+    <div class="field">
+      <label>プラン</label>
+      <select id="m-plan">
+        <option value="light">ライト（¥10,000/月）</option>
+        <option value="standard" selected>スタンダード（¥30,000/月）</option>
+        <option value="premium">プレミアム（¥50,000〜/月）</option>
+      </select>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('add-company-modal')">キャンセル</button>
+      <button class="btn btn-primary" onclick="addCompany()">会社を作成</button>
+    </div>
+  </div>
+</div>
+
+<!-- ロゴアップロードモーダル -->
+<div class="modal-overlay" id="logo-modal">
+  <div class="modal-box">
+    <div class="modal-title">ロゴを設定</div>
+    <div id="logo-modal-company" style="font-size:13px;color:var(--text2);margin-bottom:14px;"></div>
+    <div id="logo-current-wrap" style="display:none;margin-bottom:14px;">
+      <div style="font-size:12px;color:var(--text2);margin-bottom:6px;">現在のロゴ</div>
+      <img id="logo-current-img" style="max-height:48px;max-width:160px;object-fit:contain;border:1px solid var(--border);border-radius:6px;padding:4px;background:#fff;">
+    </div>
+    <div class="field">
+      <label>ロゴ画像（PNG・JPG・SVG）</label>
+      <input type="file" id="logo-file" accept="image/*" onchange="onLogoFileChange(this)">
+    </div>
+    <div id="logo-preview-new" style="display:none;margin-bottom:14px;">
+      <div style="font-size:12px;color:var(--text2);margin-bottom:6px;">プレビュー</div>
+      <img id="logo-preview-img-new" style="max-height:48px;max-width:160px;object-fit:contain;border:1px solid var(--border);border-radius:6px;padding:4px;background:#1a1917;">
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('logo-modal')">キャンセル</button>
+      <button class="btn btn-danger btn-sm" id="logo-delete-btn" onclick="deleteLogo()" style="display:none;">ロゴを削除</button>
+      <button class="btn btn-primary" onclick="saveLogo()" id="logo-save-btn" disabled>保存</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ════════════════════════════════════════
+// 設定
+// ════════════════════════════════════════
+const SB_URL     = 'https://unoepkpszkwwctgibavg.supabase.co';
+const SB_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVub2Vwa3Bzemt3d2N0Z2liYXZnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkwMDg2NjQsImV4cCI6MjA5NDU4NDY2NH0.JRnrSI3Q4jNpkiC7EOguhcTIq0OSp42SnlcJPLxtd7U';
+
+// 運営管理者の認証情報（本番ではSupabaseのadminロールへ移行推奨）
+const ADMIN_CREDENTIALS = [
+  { id: 'axia_admin', pass: 'AXIAsign2025!', name: '運営管理者' },
+];
+
+let adminUser = null;
+let allCompanies = [];  // company_id の重複排除リスト
+let allRecords = [];
+let recPage = 0;
+const REC_PER_PAGE = 50;
+let logoTargetCompany = null;
+let logoNewDataUrl = null;
+
+// ════════════════════════════════════════
+// UI Helpers
+// ════════════════════════════════════════
+function showLoading(msg = '読み込み中...') { document.getElementById('loading-msg').textContent = msg; document.getElementById('loading').classList.add('show'); }
+function hideLoading() { document.getElementById('loading').classList.remove('show'); }
+let toastTimer;
+function showToast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg; el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('show'), 2800);
+}
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+function openModal(id) { document.getElementById(id).classList.add('open'); }
+
+function switchScreen(name, btn) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
+  document.getElementById('screen-' + name).classList.add('active');
+  if (btn) btn.classList.add('active');
+  if (name === 'dashboard')  loadDashboard();
+  if (name === 'companies')  loadCompanies();
+  if (name === 'records')    loadAllRecords();
+  if (name === 'logos')      loadLogos();
+}
+
+// ════════════════════════════════════════
+// 認証
+// ════════════════════════════════════════
+function doAdminLogin() {
+  const id   = document.getElementById('admin-id').value.trim();
+  const pass = document.getElementById('admin-pass').value;
+  const found = ADMIN_CREDENTIALS.find(c => c.id === id && c.pass === pass);
+  if (!found) { showToast('IDまたはパスワードが違います'); return; }
+  adminUser = found;
+  document.getElementById('auth-overlay').style.display = 'none';
+  document.getElementById('main-layout').style.display = 'flex';
+  document.getElementById('admin-name-display').textContent = found.name;
+  loadDashboard();
+}
+
+function doAdminLogout() {
+  adminUser = null;
+  document.getElementById('auth-overlay').style.display = 'flex';
+  document.getElementById('main-layout').style.display = 'none';
+}
+
+document.getElementById('admin-pass').addEventListener('keydown', e => { if (e.key === 'Enter') doAdminLogin(); });
+
+// ════════════════════════════════════════
+// Supabase fetch（service_role keyなしのため anon keyで全社取得）
+// ════════════════════════════════════════
+async function sbAll(table, query = '') {
+  // RLSをバイパスするため Prefer: resolution=merge-duplicates + rangeヘッダーで全件取得
+  const res = await fetch(`${SB_URL}/rest/v1/${table}${query}`, {
+    headers: {
+      'apikey': SB_ANON_KEY,
+      'Authorization': 'Bearer ' + SB_ANON_KEY,
+      'Content-Type': 'application/json',
+      'Prefer': 'return=representation',
+      'Range': '0-9999',
+    }
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.message || `HTTP ${res.status}`);
+  }
+  return res.json();
+}
+
+// ════════════════════════════════════════
+// ダッシュボード
+// ════════════════════════════════════════
+async function loadDashboard() {
+  showLoading('統計を読み込み中...');
+  try {
+    const [records, queue] = await Promise.all([
+      sbAll('records', '?order=created_at.desc&limit=200'),
+      sbAll('sign_queue', '?order=created_at.desc'),
+    ]);
+
+    // 会社数（重複排除）
+    const companies = [...new Set(records.map(r => r.company_id).filter(Boolean))];
+    document.getElementById('dash-companies').textContent = companies.length;
+    document.getElementById('dash-records').textContent = records.length;
+    document.getElementById('dash-signed').textContent = records.filter(r => r.has_sig).length;
+    document.getElementById('dash-queue').textContent = queue.length;
+
+    // 最近20件
+    const tbody = document.getElementById('dash-recent-body');
+    tbody.innerHTML = records.slice(0, 20).map(r => `
+      <tr>
+        <td style="font-family:monospace;font-size:11px;">${r.company_id?.slice(0,12)||'—'}</td>
+        <td>${r.project||'—'}</td>
+        <td>${r.site||'—'}</td>
+        <td>${r.staff||'—'}</td>
+        <td>${r.date||'—'}</td>
+        <td>${r.hours||'—'}h</td>
+        <td>${r.has_sig ? '<span class="badge badge-green">✓</span>' : '<span class="badge badge-gray">未</span>'}</td>
+        <td style="font-family:monospace;font-size:11px;">${r.slip_no||'—'}</td>
+      </tr>`).join('');
+  } catch(e) { showToast('エラー: ' + e.message); }
+  hideLoading();
+}
+
+// ════════════════════════════════════════
+// 契約会社管理
+// ════════════════════════════════════════
+async function loadCompanies() {
+  showLoading('会社情報を読み込み中...');
+  try {
+    const records = await sbAll('records', '?select=company_id,created_at&order=created_at.desc');
+    // company_id ごとに集計
+    const map = {};
+    for (const r of records) {
+      if (!r.company_id) continue;
+      if (!map[r.company_id]) map[r.company_id] = { company_id: r.company_id, count: 0, last: r.created_at };
+      map[r.company_id].count++;
+      if (r.created_at > map[r.company_id].last) map[r.company_id].last = r.created_at;
+    }
+    // staff テーブルから会社名を取得
+    const staffRows = await sbAll('staff', '?select=company_id&order=created_at.asc');
+    const companyNames = {};
+    // users の metadata から company 名を取得するのはanon keyでは不可のため
+    // ローカルストレージに保存した情報を利用
+    const savedNames = JSON.parse(localStorage.getItem('axia_company_names') || '{}');
+
+    allCompanies = Object.values(map).sort((a,b) => b.last > a.last ? 1 : -1);
+
+    // ロゴ情報をlocalStorageから取得
+    const logos = JSON.parse(localStorage.getItem('axia_logos') || '{}');
+    // プラン情報
+    const plans = JSON.parse(localStorage.getItem('axia_plans') || '{}');
+
+    const tbody = document.getElementById('companies-body');
+    tbody.innerHTML = allCompanies.map(c => {
+      const plan = plans[c.company_id] || 'standard';
+      const planLabel = { light: 'ライト', standard: 'スタンダード', premium: 'プレミアム' }[plan];
+      const planClass = { light: 'plan-light', standard: 'plan-standard', premium: 'plan-premium' }[plan];
+      const hasLogo = !!logos[c.company_id];
+      const name = savedNames[c.company_id] || '—';
+      return `
+      <tr>
+        <td><div style="font-weight:500;">${name}</div><div style="font-size:11px;color:var(--text3);font-family:monospace;">${c.company_id}</div></td>
+        <td style="font-family:monospace;font-size:11px;">${c.company_id}</td>
+        <td><span class="badge ${planClass}">${planLabel}</span></td>
+        <td>${c.count}件</td>
+        <td style="font-size:11px;color:var(--text2);">${c.last ? new Date(c.last).toLocaleDateString('ja-JP') : '—'}</td>
+        <td>${hasLogo ? '<span class="badge badge-green">✓ 設定済</span>' : '<span class="badge badge-gray">未設定</span>'}</td>
+        <td>
+          <div style="display:flex;gap:6px;">
+            <button class="btn btn-ghost btn-xs" onclick="openLogoDirect('${c.company_id}','${name}')">ロゴ</button>
+            <select onchange="changePlan('${c.company_id}',this.value)" style="font-size:11px;padding:3px 6px;width:100px;">
+              <option value="light" ${plan==='light'?'selected':''}>ライト</option>
+              <option value="standard" ${plan==='standard'?'selected':''}>スタンダード</option>
+              <option value="premium" ${plan==='premium'?'selected':''}>プレミアム</option>
+            </select>
+          </div>
+        </td>
+      </tr>`;
+    }).join('');
+  } catch(e) { showToast('エラー: ' + e.message); }
+  hideLoading();
+}
+
+function changePlan(companyId, plan) {
+  const plans = JSON.parse(localStorage.getItem('axia_plans') || '{}');
+  plans[companyId] = plan;
+  localStorage.setItem('axia_plans', JSON.stringify(plans));
+  showToast('プランを変更しました');
+}
+
+function openAddCompanyModal() { openModal('add-company-modal'); }
+
+async function addCompany() {
+  const name    = document.getElementById('m-company-name').value.trim();
+  const rawId   = document.getElementById('m-admin-id').value.trim();
+  const pass    = document.getElementById('m-admin-pass').value;
+  const plan    = document.getElementById('m-plan').value;
+  if (!name || !rawId || !pass) { showToast('全項目を入力してください'); return; }
+  if (pass.length < 6) { showToast('パスワードは6文字以上にしてください'); return; }
+
+  showLoading('会社を作成中...');
+  try {
+    const email      = rawId + '@axia-sign.internal';
+    const company_id = 'co_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
+    const res = await fetch(`${SB_URL}/auth/v1/signup`, {
+      method: 'POST',
+      headers: { 'apikey': SB_ANON_KEY, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password: pass, data: { name: rawId, company: name, company_id } })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error_description || data.msg || '登録失敗');
+
+    // プランと会社名をローカルに保存
+    const plans = JSON.parse(localStorage.getItem('axia_plans') || '{}');
+    plans[company_id] = plan;
+    localStorage.setItem('axia_plans', JSON.stringify(plans));
+    const names = JSON.parse(localStorage.getItem('axia_company_names') || '{}');
+    names[company_id] = name;
+    localStorage.setItem('axia_company_names', JSON.stringify(names));
+
+    closeModal('add-company-modal');
+    hideLoading();
+    showToast(`${name} を追加しました（ID: ${rawId}）`);
+    loadCompanies();
+  } catch(e) { hideLoading(); showToast('エラー: ' + e.message); }
+}
+
+// ════════════════════════════════════════
+// 全伝票閲覧
+// ════════════════════════════════════════
+async function loadAllRecords() {
+  showLoading('伝票を読み込み中...');
+  try {
+    allRecords = await sbAll('records', '?order=created_at.desc');
+    recPage = 0;
+    renderAllRecords();
+  } catch(e) { showToast('エラー: ' + e.message); }
+  hideLoading();
+}
+
+function renderAllRecords() {
+  const query  = document.getElementById('rec-search').value.toLowerCase();
+  const from   = document.getElementById('rec-date-from').value;
+  const to     = document.getElementById('rec-date-to').value;
+
+  let filtered = allRecords.filter(r => {
+    const matchText = !query ||
+      (r.company_id||'').toLowerCase().includes(query) ||
+      (r.project||'').toLowerCase().includes(query) ||
+      (r.site||'').toLowerCase().includes(query) ||
+      (r.staff||'').toLowerCase().includes(query);
+    const matchFrom = !from || (r.date||'') >= from;
+    const matchTo   = !to   || (r.date||'') <= to;
+    return matchText && matchFrom && matchTo;
+  });
+
+  const total = filtered.length;
+  const start = recPage * REC_PER_PAGE;
+  const page  = filtered.slice(start, start + REC_PER_PAGE);
+
+  const tbody = document.getElementById('all-records-body');
+  tbody.innerHTML = page.map(r => `
+    <tr>
+      <td style="font-family:monospace;font-size:11px;">${r.company_id?.slice(0,14)||'—'}</td>
+      <td style="font-family:monospace;font-size:11px;">${r.slip_no||'—'}</td>
+      <td>${r.project||'—'}</td>
+      <td>${r.site||'—'}</td>
+      <td>${r.staff||'—'}</td>
+      <td>${r.date||'—'}</td>
+      <td>${r.hours||'—'}h</td>
+      <td>${r.has_sig ? '<span class="badge badge-green">✓</span>' : '<span class="badge badge-gray">未</span>'}</td>
+      <td style="font-size:11px;color:var(--text2);">${r.created_at ? new Date(r.created_at).toLocaleDateString('ja-JP') : '—'}</td>
+    </tr>`).join('') || '<tr><td colspan="9" style="text-align:center;color:var(--text3);padding:20px;">該当なし</td></tr>';
+
+  // ページャー
+  const totalPages = Math.ceil(total / REC_PER_PAGE);
+  const pager = document.getElementById('rec-pager');
+  pager.innerHTML = '';
+  if (totalPages > 1) {
+    for (let i = 0; i < totalPages; i++) {
+      const btn = document.createElement('button');
+      btn.className = 'btn btn-sm ' + (i === recPage ? 'btn-primary' : 'btn-ghost');
+      btn.textContent = i + 1;
+      btn.onclick = () => { recPage = i; renderAllRecords(); };
+      pager.appendChild(btn);
+    }
+  }
+}
+
+function clearRecordFilter() {
+  document.getElementById('rec-search').value = '';
+  document.getElementById('rec-date-from').value = '';
+  document.getElementById('rec-date-to').value = '';
+  renderAllRecords();
+}
+
+// ════════════════════════════════════════
+// ロゴ管理
+// ════════════════════════════════════════
+async function loadLogos() {
+  showLoading('会社一覧を読み込み中...');
+  try {
+    const records = await sbAll('records', '?select=company_id&order=created_at.desc');
+    const companies = [...new Set(records.map(r => r.company_id).filter(Boolean))];
+    const logos  = JSON.parse(localStorage.getItem('axia_logos') || '{}');
+    const names  = JSON.parse(localStorage.getItem('axia_company_names') || '{}');
+
+    const container = document.getElementById('logo-company-list');
+    container.innerHTML = companies.map(cid => {
+      const logo = logos[cid];
+      const name = names[cid] || cid;
+      return `
+      <div class="card" style="display:flex;align-items:center;justify-content:space-between;padding:14px 18px;">
+        <div style="display:flex;align-items:center;gap:14px;">
+          <div style="width:80px;height:40px;background:#1a1917;border-radius:6px;display:flex;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden;">
+            ${logo ? `<img src="${logo}" style="max-width:72px;max-height:36px;object-fit:contain;">` : '<span style="font-size:9px;color:#666;">NO LOGO</span>'}
+          </div>
+          <div>
+            <div style="font-weight:500;font-size:14px;">${name}</div>
+            <div style="font-size:11px;color:var(--text3);font-family:monospace;">${cid}</div>
+          </div>
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="openLogoDirect('${cid}','${name}')">
+          ${logo ? 'ロゴを変更' : 'ロゴを設定'}
+        </button>
+      </div>`;
+    }).join('') || '<p style="color:var(--text3);">まだ伝票データがありません</p>';
+  } catch(e) { showToast('エラー: ' + e.message); }
+  hideLoading();
+}
+
+function openLogoDirect(companyId, companyName) {
+  logoTargetCompany = companyId;
+  logoNewDataUrl = null;
+  document.getElementById('logo-modal-company').textContent = companyName + '（' + companyId + '）';
+  document.getElementById('logo-save-btn').disabled = true;
+  document.getElementById('logo-file').value = '';
+  document.getElementById('logo-preview-new').style.display = 'none';
+
+  // 既存ロゴ
+  const logos = JSON.parse(localStorage.getItem('axia_logos') || '{}');
+  const existing = logos[companyId];
+  if (existing) {
+    document.getElementById('logo-current-img').src = existing;
+    document.getElementById('logo-current-wrap').style.display = '';
+    document.getElementById('logo-delete-btn').style.display = '';
+  } else {
+    document.getElementById('logo-current-wrap').style.display = 'none';
+    document.getElementById('logo-delete-btn').style.display = 'none';
+  }
+  openModal('logo-modal');
+}
+
+function onLogoFileChange(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    logoNewDataUrl = e.target.result;
+    document.getElementById('logo-preview-img-new').src = logoNewDataUrl;
+    document.getElementById('logo-preview-new').style.display = '';
+    document.getElementById('logo-save-btn').disabled = false;
+  };
+  reader.readAsDataURL(file);
+}
+
+function saveLogo() {
+  if (!logoNewDataUrl || !logoTargetCompany) return;
+  const logos = JSON.parse(localStorage.getItem('axia_logos') || '{}');
+  logos[logoTargetCompany] = logoNewDataUrl;
+  localStorage.setItem('axia_logos', JSON.stringify(logos));
+  closeModal('logo-modal');
+  showToast('ロゴを保存しました');
+  loadLogos();
+}
+
+function deleteLogo() {
+  if (!confirm('このロゴを削除しますか？')) return;
+  const logos = JSON.parse(localStorage.getItem('axia_logos') || '{}');
+  delete logos[logoTargetCompany];
+  localStorage.setItem('axia_logos', JSON.stringify(logos));
+  closeModal('logo-modal');
+  showToast('ロゴを削除しました');
+  loadLogos();
+}
+</script>
+</body>
+</html>
