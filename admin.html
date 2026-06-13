@@ -788,7 +788,7 @@ function openAddCompanyModal() {
 // 会社名入力時にIDを自動生成してhiddenフィールドに入れる
 function autoGenLoginId() {
   const name = document.getElementById('m-company-name').value.trim();
-  const base = name.replace(/[^ -]/g, '').replace(/[^a-zA-Z0-9]/g, '').toLowerCase().slice(0, 8);
+  const base = name.replace(/[^a-zA-Z0-9]/g, '').toLowerCase().slice(0, 8);
   const suffix = Math.random().toString(36).slice(2, 6);
   document.getElementById('m-admin-id').value = (base || 'co') + suffix;
 }
