@@ -153,6 +153,23 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
         ロゴ管理
       </button>
+      <button class="nav-item" onclick="switchScreen('usage',this)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+        利用量管理
+      </button>
+      <button class="nav-item" onclick="switchScreen('announce',this)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M22 17H2a3 3 0 000 6h20"/><path d="M4 7.5v9C4 17.9 5.1 19 6.5 19h11c1.4 0 2.5-1.1 2.5-2.5V7.5"/><path d="M8 3.5C8 2.1 9.1 1 10.5 1h3C14.9 1 16 2.1 16 3.5V7H8V3.5z"/></svg>
+        お知らせ管理
+      </button>
+      <button class="nav-item" onclick="switchScreen('maillog',this)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+        メール送信ログ
+      </button>
+      <div style="border-top:1px solid rgba(255,255,255,0.1);margin:8px 0;"></div>
+      <button class="nav-item" onclick="switchScreen('impersonate',this)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        代理ログイン
+      </button>
     </nav>
     <div class="sidebar-footer">
       <div id="admin-name-display" style="margin-bottom:6px;color:rgba(255,255,255,0.6);font-size:12px;"></div>
@@ -269,6 +286,91 @@
       <div id="logo-company-list"></div>
     </div>
 
+    <!-- 利用量管理 -->
+    <div class="screen" id="screen-usage">
+      <div class="page-title">利用量管理</div>
+      <div class="card" style="margin-bottom:14px;">
+        <div style="display:flex;gap:8px;align-items:center;">
+          <select id="usage-month" style="width:160px;" onchange="loadUsage()"></select>
+          <button class="btn btn-ghost btn-sm" onclick="loadUsage()">更新</button>
+        </div>
+      </div>
+      <div class="card" style="padding:0;overflow:hidden;">
+        <table>
+          <thead><tr><th>会社ID / 会社名</th><th>プラン</th><th>伝票発行数</th><th>署名済み</th><th>メール送信数</th><th>上限状況</th></tr></thead>
+          <tbody id="usage-body"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- お知らせ管理 -->
+    <div class="screen" id="screen-announce">
+      <div class="page-title">お知らせ管理</div>
+      <div class="card">
+        <div class="card-title">新規お知らせを作成</div>
+        <div class="field"><label>タイトル</label><input type="text" id="ann-title" placeholder="例：新機能追加のお知らせ"></div>
+        <div class="field"><label>本文</label><textarea id="ann-body" rows="4" placeholder="お知らせの内容を入力..."></textarea></div>
+        <div style="display:flex;gap:8px;align-items:center;margin-bottom:14px;">
+          <div style="flex:1;">
+            <label style="display:block;font-size:12px;font-weight:500;margin-bottom:5px;color:var(--text2);">種別</label>
+            <select id="ann-type">
+              <option value="info">📢 お知らせ</option>
+              <option value="warning">⚠️ 重要</option>
+              <option value="maintenance">🔧 メンテナンス</option>
+            </select>
+          </div>
+          <div style="flex:1;">
+            <label style="display:block;font-size:12px;font-weight:500;margin-bottom:5px;color:var(--text2);">表示期限</label>
+            <input type="date" id="ann-expires">
+          </div>
+        </div>
+        <button class="btn btn-primary" onclick="saveAnnounce()">公開する</button>
+      </div>
+      <div class="card">
+        <div class="card-title">公開中のお知らせ</div>
+        <div id="announce-list"></div>
+      </div>
+    </div>
+
+    <!-- メール送信ログ -->
+    <div class="screen" id="screen-maillog">
+      <div class="page-title">メール送信ログ</div>
+      <div class="card" style="margin-bottom:14px;">
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+          <input type="text" id="mail-search" placeholder="伝票No.・会社ID・送信先メールで検索" style="flex:1;min-width:200px;" oninput="renderMailLog()">
+          <select id="mail-status-filter" onchange="renderMailLog()" style="width:120px;">
+            <option value="">状態：全て</option>
+            <option value="sent">送信済み</option>
+            <option value="error">エラー</option>
+          </select>
+          <button class="btn btn-ghost btn-sm" onclick="loadMailLog()">更新</button>
+        </div>
+      </div>
+      <div class="card" style="padding:0;overflow:hidden;">
+        <table>
+          <thead><tr><th>送信日時</th><th>会社</th><th>伝票No.</th><th>担当者</th><th>送信先</th><th>状態</th><th>Resend ID</th></tr></thead>
+          <tbody id="maillog-body"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- 代理ログイン -->
+    <div class="screen" id="screen-impersonate">
+      <div class="page-title">代理ログイン</div>
+      <div class="card" style="background:var(--amber-bg);border:1px solid #fde68a;">
+        <div style="font-size:13px;color:var(--amber-text);line-height:1.7;">
+          ⚠️ <strong>注意：</strong>代理ログインを使うと、その会社のデータにアクセスできます。サポート目的以外では使用しないでください。操作ログは記録されます。
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">会社を選択して代理ログイン</div>
+        <div style="display:flex;gap:8px;margin-bottom:16px;">
+          <input type="text" id="imp-search" placeholder="会社名・会社IDで絞り込み" style="flex:1;" oninput="renderImpersonateList()">
+        </div>
+        <div id="impersonate-list"></div>
+      </div>
+    </div>
+
   </main>
 </div>
 
@@ -277,13 +379,7 @@
   <div class="modal-box">
     <div class="modal-title">会社を追加</div>
     <div class="field"><label>会社名 *</label><input type="text" id="m-company-name" placeholder="株式会社〇〇警備" oninput="autoGenLoginId()"></div>
-    <div class="field">
-      <label>管理者ログインID <span style="color:var(--text3);font-weight:400">（自動生成・変更可）</span></label>
-      <div style="display:flex;gap:6px;">
-        <input type="text" id="m-admin-id" placeholder="例：yamada" style="letter-spacing:0.05em;flex:1;" oninput="this.value=this.value.toLowerCase().replace(/[^a-z0-9_-]/g,'')">
-        <button type="button" class="btn btn-ghost btn-sm" onclick="autoGenLoginId(true)" style="flex-shrink:0;">再生成</button>
-      </div>
-    </div>
+    <input type="hidden" id="m-admin-id">
     <div class="field">
       <label>初期パスワード <span style="color:var(--text3);font-weight:400">（自動生成）</span></label>
       <div style="display:flex;gap:6px;">
@@ -350,7 +446,8 @@
 // 設定
 // ════════════════════════════════════════
 const SB_URL     = 'https://unoepkpszkwwctgibavg.supabase.co';
-const SB_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVub2Vwa3Bzemt3d2N0Z2liYXZnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkwMDg2NjQsImV4cCI6MjA5NDU4NDY2NH0.JRnrSI3Q4jNpkiC7EOguhcTIq0OSp42SnlcJPLxtd7U';
+const SB_ANON_KEY     = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVub2Vwa3Bzemt3d2N0Z2liYXZnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkwMDg2NjQsImV4cCI6MjA5NDU4NDY2NH0.JRnrSI3Q4jNpkiC7EOguhcTIq0OSp42SnlcJPLxtd7U';
+const SB_SERVICE_KEY  = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVub2Vwa3Bzemt3d2N0Z2liYXZnIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3OTAwODY2NCwiZXhwIjoyMDk0NTg0NjY0fQ.Ti-oOOJtavcgbaLSJjCYF35CE7kMYDJ8FZQ1B_h81Y8';
 
 // 管理者メールアドレス（このリストに含まれるメールのみ管理画面に入れる）
 const ADMIN_EMAILS = ['axiaofficial.contact@gmail.com'];
@@ -384,10 +481,14 @@ function switchScreen(name, btn) {
   document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
   document.getElementById('screen-' + name).classList.add('active');
   if (btn) btn.classList.add('active');
-  if (name === 'dashboard')  loadDashboard();
-  if (name === 'companies')  loadCompanies();
-  if (name === 'records')    loadAllRecords();
-  if (name === 'logos')      loadLogos();
+  if (name === 'dashboard')   loadDashboard();
+  if (name === 'companies')   loadCompanies();
+  if (name === 'records')     loadAllRecords();
+  if (name === 'logos')       loadLogos();
+  if (name === 'usage')       loadUsage();
+  if (name === 'announce')    loadAnnounce();
+  if (name === 'maillog')     loadMailLog();
+  if (name === 'impersonate') loadImpersonate();
 }
 
 // ════════════════════════════════════════
@@ -444,11 +545,10 @@ document.getElementById('admin-pass').addEventListener('keydown', e => { if (e.k
 // Supabase fetch（service_role keyなしのため anon keyで全社取得）
 // ════════════════════════════════════════
 async function sbAll(table, query = '') {
-  const token = adminToken || SB_ANON_KEY;
   const res = await fetch(`${SB_URL}/rest/v1/${table}${query}`, {
     headers: {
-      'apikey': SB_ANON_KEY,
-      'Authorization': 'Bearer ' + token,
+      'apikey': SB_SERVICE_KEY,
+      'Authorization': 'Bearer ' + SB_SERVICE_KEY,
       'Content-Type': 'application/json',
       'Prefer': 'return=representation',
       'Range': '0-9999',
@@ -459,6 +559,22 @@ async function sbAll(table, query = '') {
     throw new Error(err.message || `HTTP ${res.status}`);
   }
   return res.json();
+}
+
+// Supabase Auth Admin API（全ユーザー取得）
+async function fetchAllUsers() {
+  const res = await fetch(`${SB_URL}/auth/v1/admin/users?per_page=1000`, {
+    headers: {
+      'apikey': SB_SERVICE_KEY,
+      'Authorization': 'Bearer ' + SB_SERVICE_KEY,
+    }
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.message || `HTTP ${res.status}`);
+  }
+  const data = await res.json();
+  return (data.users || []).filter(u => !ADMIN_EMAILS.includes(u.email));
 }
 
 // ════════════════════════════════════════
@@ -503,34 +619,72 @@ async function loadDashboard() {
 async function loadCompanies() {
   showLoading('会社情報を読み込み中...');
   try {
-    const records = await sbAll('records', '?select=company_id,created_at&order=created_at.desc');
-    const map = {};
+    // Auth Admin APIで全ユーザー取得（伝票0件の新規会社も表示される）
+    const [users, records] = await Promise.all([
+      fetchAllUsers(),
+      sbAll('records', '?select=company_id,created_at,has_sig&order=created_at.desc'),
+    ]);
+
+    // records を company_id ごとに集計
+    const recMap = {};
     for (const r of records) {
       if (!r.company_id) continue;
-      if (!map[r.company_id]) map[r.company_id] = { company_id: r.company_id, count: 0, last: r.created_at };
-      map[r.company_id].count++;
-      if (r.created_at > map[r.company_id].last) map[r.company_id].last = r.created_at;
+      if (!recMap[r.company_id]) recMap[r.company_id] = { count: 0, signed: 0, last: r.created_at };
+      recMap[r.company_id].count++;
+      if (r.has_sig) recMap[r.company_id].signed++;
+      if (r.created_at > recMap[r.company_id].last) recMap[r.company_id].last = r.created_at;
     }
-    allCompanies = Object.values(map).sort((a,b) => b.last > a.last ? 1 : -1);
+
+    // ユーザーを会社ごとにまとめる（1会社に複数ユーザーが紐づく想定）
+    const companyMap = {};
+    for (const u of users) {
+      const meta = u.user_metadata || {};
+      const cid  = meta.company_id || u.id;
+      if (!companyMap[cid]) {
+        companyMap[cid] = {
+          company_id:   cid,
+          company_name: meta.company || '（未設定）',
+          login_id:     (u.email || '').replace('@axia-sign.internal', ''),
+          user_id:      u.id,
+          created_at:   u.created_at,
+          users:        [],
+        };
+      }
+      companyMap[cid].users.push(u);
+    }
+
+    // 会社名をSupabaseから取ったのでlocalStorageにも同期保存（ダッシュボード等で使用）
+    const names = {};
+    Object.values(companyMap).forEach(c => { names[c.company_id] = c.company_name; });
+    localStorage.setItem('axia_company_names', JSON.stringify(names));
+
+    allCompanies = Object.values(companyMap).map(c => ({
+      ...c,
+      rec_count:  (recMap[c.company_id]?.count  || 0),
+      rec_signed: (recMap[c.company_id]?.signed  || 0),
+      last_used:  recMap[c.company_id]?.last || null,
+    })).sort((a,b) => (b.created_at||'') > (a.created_at||'') ? 1 : -1);
+
     renderCompanies();
-  } catch(e) { showToast('エラー: ' + e.message); }
+  } catch(e) { showToast('エラー: ' + e.message); console.error(e); }
   hideLoading();
 }
 
 function renderCompanies() {
-  const query      = (document.getElementById('co-search')?.value || '').toLowerCase();
-  const planFilter = document.getElementById('co-plan-filter')?.value || '';
+  const query        = (document.getElementById('co-search')?.value || '').toLowerCase();
+  const planFilter   = document.getElementById('co-plan-filter')?.value || '';
   const statusFilter = document.getElementById('co-status-filter')?.value || '';
-  const savedNames = JSON.parse(localStorage.getItem('axia_company_names') || '{}');
-  const logos      = JSON.parse(localStorage.getItem('axia_logos') || '{}');
-  const plans      = JSON.parse(localStorage.getItem('axia_plans') || '{}');
-  const banned     = JSON.parse(localStorage.getItem('axia_banned') || '{}');
+  const logos  = JSON.parse(localStorage.getItem('axia_logos')  || '{}');
+  const plans  = JSON.parse(localStorage.getItem('axia_plans')  || '{}');
+  const banned = JSON.parse(localStorage.getItem('axia_banned') || '{}');
 
   let filtered = allCompanies.filter(c => {
-    const name = savedNames[c.company_id] || '';
-    const matchText = !query || name.toLowerCase().includes(query) || c.company_id.toLowerCase().includes(query);
-    const matchPlan = !planFilter || (plans[c.company_id] || 'standard') === planFilter;
-    const isBanned  = !!banned[c.company_id];
+    const matchText = !query ||
+      c.company_name.toLowerCase().includes(query) ||
+      c.company_id.toLowerCase().includes(query) ||
+      c.login_id.toLowerCase().includes(query);
+    const matchPlan   = !planFilter   || (plans[c.company_id] || 'standard') === planFilter;
+    const isBanned    = !!banned[c.company_id];
     const matchStatus = !statusFilter || (statusFilter === 'banned' ? isBanned : !isBanned);
     return matchText && matchPlan && matchStatus;
   });
@@ -544,32 +698,36 @@ function renderCompanies() {
     const planLabel = { light: 'ライト', standard: 'スタンダード', premium: 'プレミアム' }[plan];
     const planClass = { light: 'plan-light', standard: 'plan-standard', premium: 'plan-premium' }[plan];
     const hasLogo   = !!logos[c.company_id];
-    const name      = savedNames[c.company_id] || '—';
     const isBanned  = !!banned[c.company_id];
+    const esc       = s => s.replace(/'/g, "\'");
     return `
-    <tr style="${isBanned ? 'opacity:0.5;background:#fff5f5;' : ''}">
+    <tr style="${isBanned ? 'opacity:0.55;background:#fff5f5;' : ''}">
       <td>
-        <div style="font-weight:500;font-size:13px;">${name}</div>
-        <div style="font-size:10px;color:var(--text3);font-family:monospace;">${c.company_id}</div>
+        <div style="font-weight:600;font-size:13px;">${c.company_id}</div>
+        <div style="font-size:11px;color:var(--text2);margin-top:1px;">${c.company_name}</div>
+        <div style="font-size:10px;color:var(--text3);">ID: <code>${c.login_id}</code> ／ 登録: ${c.created_at ? new Date(c.created_at).toLocaleDateString('ja-JP') : '—'}</div>
       </td>
       <td><span class="badge ${planClass}">${planLabel}</span></td>
-      <td>${c.count}件</td>
-      <td style="font-size:11px;color:var(--text2);">${c.last ? new Date(c.last).toLocaleDateString('ja-JP') : '—'}</td>
+      <td>
+        <div style="font-weight:600;">${c.rec_count}件</div>
+        <div style="font-size:10px;color:var(--text3);">署名済 ${c.rec_signed}件</div>
+      </td>
+      <td style="font-size:11px;color:var(--text2);">${c.last_used ? new Date(c.last_used).toLocaleDateString('ja-JP') : '未使用'}</td>
       <td>${isBanned
         ? '<span class="badge badge-red">停止中</span>'
         : '<span class="badge badge-green">アクティブ</span>'}</td>
       <td>${hasLogo ? '<span class="badge badge-green">✓</span>' : '<span class="badge badge-gray">未</span>'}</td>
       <td>
         <div style="display:flex;gap:5px;flex-wrap:wrap;">
-          <button class="btn btn-ghost btn-xs" onclick="openLogoDirect('${c.company_id}','${name.replace(/'/g,"\'")}')">ロゴ</button>
+          <button class="btn btn-ghost btn-xs" onclick="openLogoDirect('${esc(c.company_id)}','${esc(c.company_name)}')">ロゴ</button>
           <select onchange="changePlan('${c.company_id}',this.value)" style="font-size:11px;padding:3px 6px;width:96px;border-radius:6px;border:1px solid var(--border2);">
             <option value="light"    ${plan==='light'   ?'selected':''}>ライト</option>
             <option value="standard" ${plan==='standard'?'selected':''}>スタンダード</option>
             <option value="premium"  ${plan==='premium' ?'selected':''}>プレミアム</option>
           </select>
           ${isBanned
-            ? `<button class="btn btn-ghost btn-xs" style="color:var(--green-text);" onclick="unbanCompany('${c.company_id}','${name.replace(/'/g,"\'")}')">解除</button>`
-            : `<button class="btn btn-xs" style="background:var(--red-bg);color:var(--red-text);border:none;" onclick="confirmBan('${c.company_id}','${name.replace(/'/g,"\'")}')">停止</button>`}
+            ? `<button class="btn btn-ghost btn-xs" style="color:var(--green-text);" onclick="unbanCompany('${c.company_id}','${esc(c.company_name)}')">解除</button>`
+            : `<button class="btn btn-xs" style="background:var(--red-bg);color:var(--red-text);border:none;" onclick="confirmBan('${c.company_id}','${esc(c.company_name)}')">停止</button>`}
         </div>
       </td>
     </tr>`;
@@ -618,26 +776,21 @@ function unbanCompany(companyId, name) {
 }
 
 function openAddCompanyModal() {
-  // モーダルを開くたびにリセット＆自動生成
   document.getElementById('m-company-name').value = '';
-  document.getElementById('m-admin-id').value = '';
   document.getElementById('m-result').style.display = 'none';
+  document.getElementById('add-company-btn').textContent = '会社を作成';
+  document.getElementById('add-company-btn').onclick = addCompany;
   document.getElementById('add-company-btn').disabled = false;
   genPassword();
   openModal('add-company-modal');
 }
 
-// 会社名からローマ字ログインIDを自動生成
-function autoGenLoginId(force = false) {
-  const nameEl = document.getElementById('m-company-name');
-  const idEl   = document.getElementById('m-admin-id');
-  if (!force && idEl.value) return; // 手動入力済みなら上書きしない
-  const name = nameEl.value.trim();
-  if (!name) return;
-  // ひらがな・カタカナ・漢字は除去してローマ字部分だけ残し、最大12文字
-  const base = name.replace(/[　-鿿]/g, '').replace(/[^a-zA-Z0-9]/g, '').toLowerCase().slice(0, 10);
-  const suffix = Math.floor(10 + Math.random() * 90);
-  idEl.value = (base || 'company') + suffix;
+// 会社名入力時にIDを自動生成してhiddenフィールドに入れる
+function autoGenLoginId() {
+  const name = document.getElementById('m-company-name').value.trim();
+  const base = name.replace(/[^ -]/g, '').replace(/[^a-zA-Z0-9]/g, '').toLowerCase().slice(0, 8);
+  const suffix = Math.random().toString(36).slice(2, 6);
+  document.getElementById('m-admin-id').value = (base || 'co') + suffix;
 }
 
 function genPassword() {
@@ -649,14 +802,12 @@ function genPassword() {
 
 async function addCompany() {
   const name  = document.getElementById('m-company-name').value.trim();
-  let rawId   = document.getElementById('m-admin-id').value.trim();
+  autoGenLoginId(); // 常に最新の自動IDを生成
+  const rawId = document.getElementById('m-admin-id').value.trim();
   const pass  = document.getElementById('m-admin-pass').value;
   const plan  = document.getElementById('m-plan').value;
-  if (!name || !rawId || !pass) { showToast('全項目を入力してください'); return; }
+  if (!name || !rawId || !pass) { showToast('会社名を入力してください'); return; }
   if (pass.length < 6) { showToast('パスワードは6文字以上にしてください'); return; }
-
-  // IDが空なら自動生成
-  if (!rawId) { autoGenLoginId(true); rawId = document.getElementById('m-admin-id').value.trim(); }
 
   document.getElementById('add-company-btn').disabled = true;
   showLoading('会社を作成中...');
@@ -873,6 +1024,265 @@ function deleteLogo() {
   showToast('ロゴを削除しました');
   loadLogos();
 }
+
+// ════════════════════════════════════════
+// 利用量管理
+// ════════════════════════════════════════
+async function loadUsage() {
+  // 月セレクトを初期化
+  const sel = document.getElementById('usage-month');
+  if (!sel.options.length) {
+    const now = new Date();
+    for (let i = 0; i < 12; i++) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const val = d.toISOString().slice(0, 7);
+      const opt = new Option(val.replace('-', '年') + '月', val);
+      sel.appendChild(opt);
+    }
+  }
+  const month = sel.value || new Date().toISOString().slice(0, 7);
+  const from = month + '-01';
+  const to   = month + '-31';
+
+  showLoading('利用量を集計中...');
+  try {
+    const [users, records, mailLogs] = await Promise.all([
+      fetchAllUsers(),
+      sbAll('records', `?date=gte.${from}&date=lte.${to}&select=company_id,has_sig`),
+      sbAll('email_logs', `?sent_at=gte.${from}T00:00:00&sent_at=lte.${to}T23:59:59&select=company_id,status`).catch(()=>[]),
+    ]);
+
+    const plans = JSON.parse(localStorage.getItem('axia_plans') || '{}');
+    const PLAN_LIMITS = { light: 50, standard: 300, premium: 9999 };
+
+    // company_id → user情報のマップ
+    const userMap = {};
+    users.forEach(u => {
+      const cid = u.user_metadata?.company_id;
+      if (cid && !userMap[cid]) userMap[cid] = u;
+    });
+
+    // 集計
+    const recMap = {}, mailMap = {};
+    records.forEach(r => {
+      if (!recMap[r.company_id]) recMap[r.company_id] = { count: 0, signed: 0 };
+      recMap[r.company_id].count++;
+      if (r.has_sig) recMap[r.company_id].signed++;
+    });
+    mailLogs.forEach(m => {
+      if (!mailMap[m.company_id]) mailMap[m.company_id] = 0;
+      mailMap[m.company_id]++;
+    });
+
+    // 全company_idを合算
+    const cids = [...new Set([
+      ...Object.keys(userMap),
+      ...Object.keys(recMap),
+    ])];
+
+    const tbody = document.getElementById('usage-body');
+    tbody.innerHTML = cids.map(cid => {
+      const u     = userMap[cid];
+      const name  = u?.user_metadata?.company || '—';
+      const plan  = plans[cid] || 'standard';
+      const limit = PLAN_LIMITS[plan];
+      const rec   = recMap[cid]?.count || 0;
+      const signed= recMap[cid]?.signed || 0;
+      const mail  = mailMap[cid] || 0;
+      const pct   = Math.min(100, Math.round(rec / limit * 100));
+      const planLabel = { light: 'ライト', standard: 'スタンダード', premium: 'プレミアム' }[plan];
+      const planClass = { light: 'plan-light', standard: 'plan-standard', premium: 'plan-premium' }[plan];
+      const barColor  = pct > 80 ? '#dc2626' : pct > 50 ? '#d97706' : '#16a34a';
+      return `<tr>
+        <td><div style="font-size:11px;font-family:monospace;color:var(--text3);">${cid}</div><div style="font-weight:500;">${name}</div></td>
+        <td><span class="badge ${planClass}">${planLabel}</span></td>
+        <td>
+          <div style="font-weight:600;">${rec} / ${limit === 9999 ? '∞' : limit}件</div>
+          <div style="background:var(--surface2);border-radius:4px;height:5px;margin-top:4px;width:100px;">
+            <div style="background:${barColor};height:5px;border-radius:4px;width:${pct}%;"></div>
+          </div>
+        </td>
+        <td>${signed}件</td>
+        <td>${mail}通</td>
+        <td>${pct > 80
+          ? '<span class="badge badge-red">⚠️ 上限近</span>'
+          : '<span class="badge badge-green">正常</span>'}</td>
+      </tr>`;
+    }).join('') || '<tr><td colspan="6" style="text-align:center;color:var(--text3);padding:20px;">データなし</td></tr>';
+  } catch(e) { showToast('エラー: ' + e.message); console.error(e); }
+  hideLoading();
+}
+
+// ════════════════════════════════════════
+// お知らせ管理（localStorageベース）
+// ════════════════════════════════════════
+function loadAnnounce() { renderAnnounce(); }
+
+function renderAnnounce() {
+  const announcements = JSON.parse(localStorage.getItem('axia_announcements') || '[]');
+  const el = document.getElementById('announce-list');
+  if (!announcements.length) {
+    el.innerHTML = '<p style="font-size:13px;color:var(--text3);">公開中のお知らせはありません</p>';
+    return;
+  }
+  const icons = { info: '📢', warning: '⚠️', maintenance: '🔧' };
+  el.innerHTML = announcements.map((a, i) => `
+    <div style="padding:12px 0;border-bottom:0.5px solid var(--border);display:flex;align-items:flex-start;justify-content:space-between;gap:12px;">
+      <div style="flex:1;">
+        <div style="font-size:13px;font-weight:600;">${icons[a.type]||'📢'} ${a.title}</div>
+        <div style="font-size:12px;color:var(--text2);margin-top:3px;line-height:1.5;">${a.body}</div>
+        <div style="font-size:11px;color:var(--text3);margin-top:4px;">公開: ${a.created_at?.slice(0,10)} ${a.expires ? '/ 期限: '+a.expires : ''}</div>
+      </div>
+      <button class="btn btn-danger btn-xs" onclick="deleteAnnounce(${i})">削除</button>
+    </div>`).join('');
+}
+
+function saveAnnounce() {
+  const title   = document.getElementById('ann-title').value.trim();
+  const body    = document.getElementById('ann-body').value.trim();
+  const type    = document.getElementById('ann-type').value;
+  const expires = document.getElementById('ann-expires').value;
+  if (!title || !body) { showToast('タイトルと本文を入力してください'); return; }
+  const list = JSON.parse(localStorage.getItem('axia_announcements') || '[]');
+  list.unshift({ title, body, type, expires, created_at: new Date().toISOString() });
+  localStorage.setItem('axia_announcements', JSON.stringify(list));
+  document.getElementById('ann-title').value = '';
+  document.getElementById('ann-body').value  = '';
+  renderAnnounce();
+  showToast('お知らせを公開しました');
+}
+
+function deleteAnnounce(i) {
+  const list = JSON.parse(localStorage.getItem('axia_announcements') || '[]');
+  list.splice(i, 1);
+  localStorage.setItem('axia_announcements', JSON.stringify(list));
+  renderAnnounce();
+  showToast('削除しました');
+}
+
+// ════════════════════════════════════════
+// メール送信ログ
+// ════════════════════════════════════════
+let allMailLogs = [];
+
+async function loadMailLog() {
+  showLoading('ログを読み込み中...');
+  try {
+    allMailLogs = await sbAll('email_logs', '?order=sent_at.desc&limit=500');
+    renderMailLog();
+  } catch(e) {
+    showToast('email_logsテーブルが未作成の可能性があります: ' + e.message);
+    document.getElementById('maillog-body').innerHTML =
+      '<tr><td colspan="7" style="text-align:center;color:var(--text3);padding:20px;">テーブル未作成 — SQLを実行してください</td></tr>';
+  }
+  hideLoading();
+}
+
+function renderMailLog() {
+  const query  = document.getElementById('mail-search').value.toLowerCase();
+  const status = document.getElementById('mail-status-filter').value;
+  const names  = JSON.parse(localStorage.getItem('axia_company_names') || '{}');
+
+  const filtered = allMailLogs.filter(m => {
+    const matchText = !query ||
+      (m.slip_no||'').toLowerCase().includes(query) ||
+      (m.company_id||'').toLowerCase().includes(query) ||
+      (m.to_email||'').toLowerCase().includes(query) ||
+      (names[m.company_id]||'').toLowerCase().includes(query);
+    const matchStatus = !status || m.status === status;
+    return matchText && matchStatus;
+  });
+
+  document.getElementById('maillog-body').innerHTML = filtered.map(m => `
+    <tr>
+      <td style="font-size:11px;color:var(--text2);">${m.sent_at ? new Date(m.sent_at).toLocaleString('ja-JP') : '—'}</td>
+      <td>
+        <div style="font-size:12px;font-weight:500;">${names[m.company_id]||'—'}</div>
+        <div style="font-size:10px;color:var(--text3);font-family:monospace;">${m.company_id?.slice(0,14)||''}</div>
+      </td>
+      <td style="font-family:monospace;font-size:11px;">${m.slip_no||'—'}</td>
+      <td>${m.staff_name||'—'}</td>
+      <td style="font-size:12px;">${m.to_email||'—'}</td>
+      <td>${m.status === 'sent'
+        ? '<span class="badge badge-green">送信済</span>'
+        : '<span class="badge badge-red">エラー</span>'}</td>
+      <td style="font-family:monospace;font-size:10px;color:var(--text3);">${m.resend_id||'—'}</td>
+    </tr>`).join('') || '<tr><td colspan="7" style="text-align:center;color:var(--text3);padding:20px;">該当なし</td></tr>';
+}
+
+// ════════════════════════════════════════
+// 代理ログイン（Impersonation）
+// ════════════════════════════════════════
+async function loadImpersonate() {
+  if (!allCompanies.length) {
+    showLoading('会社情報を読み込み中...');
+    try { await loadCompaniesData(); } catch {}
+    hideLoading();
+  }
+  renderImpersonateList();
+}
+
+async function loadCompaniesData() {
+  const [users, records] = await Promise.all([
+    fetchAllUsers(),
+    sbAll('records', '?select=company_id,created_at,has_sig&order=created_at.desc'),
+  ]);
+  const recMap = {};
+  for (const r of records) {
+    if (!recMap[r.company_id]) recMap[r.company_id] = { count: 0 };
+    recMap[r.company_id].count++;
+  }
+  const companyMap = {};
+  for (const u of users) {
+    const meta = u.user_metadata || {};
+    const cid  = meta.company_id || u.id;
+    if (!companyMap[cid]) companyMap[cid] = {
+      company_id: cid, company_name: meta.company || '（未設定）',
+      login_id: (u.email||'').replace('@axia-sign.internal',''), user_id: u.id,
+      created_at: u.created_at, users: [], rec_count: recMap[cid]?.count||0,
+    };
+    companyMap[cid].users.push(u);
+  }
+  allCompanies = Object.values(companyMap);
+}
+
+function renderImpersonateList() {
+  const query = document.getElementById('imp-search').value.toLowerCase();
+  const el    = document.getElementById('impersonate-list');
+  const filtered = allCompanies.filter(c =>
+    !query ||
+    c.company_name.toLowerCase().includes(query) ||
+    c.company_id.toLowerCase().includes(query)
+  );
+  el.innerHTML = filtered.map(c => `
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:0.5px solid var(--border);">
+      <div>
+        <div style="font-size:11px;font-family:monospace;color:var(--text3);">${c.company_id}</div>
+        <div style="font-weight:500;font-size:14px;">${c.company_name}</div>
+        <div style="font-size:11px;color:var(--text2);">ログインID: ${c.login_id} ／ 伝票: ${c.rec_count}件</div>
+      </div>
+      <button class="btn btn-ghost btn-sm" onclick="startImpersonate('${c.company_id}','${c.company_name.replace(/'/g,"\'")}','${c.login_id}')">
+        代理ログイン →
+      </button>
+    </div>`).join('') || '<p style="color:var(--text3);font-size:13px;">該当なし</p>';
+}
+
+function startImpersonate(companyId, companyName, loginId) {
+  if (!confirm(`「${companyName}」の画面を代理ログインで開きます。
+ログインID: ${loginId}
+
+よろしいですか？`)) return;
+  // 新しいタブでindex.htmlを開き、代理ログイン情報をsessionStorageに渡す
+  const info = JSON.stringify({ companyId, companyName, loginId, byAdmin: adminUser.email, at: new Date().toISOString() });
+  sessionStorage.setItem('axia_impersonate', info);
+  window.open('index.html', '_blank');
+  showToast(`「${companyName}」の画面を別タブで開きました`);
+  // 操作ログを記録
+  const log = JSON.parse(localStorage.getItem('axia_impersonate_log') || '[]');
+  log.unshift({ companyId, companyName, loginId, by: adminUser.email, at: new Date().toISOString() });
+  localStorage.setItem('axia_impersonate_log', JSON.stringify(log.slice(0, 50)));
+}
+
 </script>
 </body>
 </html>

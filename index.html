@@ -231,7 +231,7 @@
       </div>
       <div id="home-recent"></div>
 
-      <button class="btn btn-primary" style="margin-top:1rem" onclick="switchScreen('new')">
+      <button class="btn btn-primary" style="margin-top:1rem" onclick="onNewSlipClick()">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
         新しい伝票を作成
       </button>
@@ -420,8 +420,8 @@
           <div><div class="setting-label">会社ID</div><div class="setting-sub" id="s-company-id" style="font-family:monospace;font-size:11px">—</div></div>
         </div>
         <div class="setting-row">
-          <div><div class="setting-label">メール送信者名</div></div>
-          <input type="text" id="s-sender" placeholder="AXIA Sign" style="width:140px;text-align:right">
+          <div><div class="setting-label">会社名（メールのFrom表示）</div></div>
+          <input type="text" id="s-sender" placeholder="例：〇〇警備株式会社" style="width:160px;text-align:right">
         </div>
         <button class="btn btn-ghost btn-sm" onclick="saveSettings()" style="margin-top:4px">設定を保存</button>
       </div>
@@ -516,7 +516,7 @@
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
       ホーム
     </button>
-    <button class="nav-item" id="nav-new" onclick="switchScreen('new')">
+    <button class="nav-item" id="nav-new" onclick="onNewSlipClick()">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
       新規作成
     </button>
@@ -547,6 +547,10 @@
     <div class="field" id="email-to-wrap">
       <label>送信先メールアドレス</label>
       <input type="email" id="email-to" placeholder="customer@example.com">
+    </div>
+    <div class="field">
+      <label>担当者名 <span style="color:var(--text3);font-weight:400">（メール本文に記載）</span></label>
+      <input type="text" id="email-staff-name" placeholder="例：田中">
     </div>
     <div class="field">
       <label>件名</label>
@@ -842,8 +846,6 @@ async function enterApp() {
   await updateHome();
   hideLoading();
   setGreeting();
-  // テンプレートがまだ未選択の場合は職種選択オーバーレイを表示
-  if (!_currentTemplate) showTemplateSelector();
 }
 
 function setGreeting() {
@@ -894,6 +896,13 @@ const TEMPLATES = {
   facility: { label: '施設警備', emoji: '🏢', checkLabels: ['設備の巡回・点検', '一般廃棄物の処理', 'その他'] },
   event:    { label: 'イベント', emoji: '🎪', checkLabels: ['工事関係車両・音響の管理', 'その他'] },
 };
+
+function onNewSlipClick() {
+  // 新規作成時に毎回テンプレートを選ばせる
+  _currentTemplate = null;
+  updateTemplateBadge();
+  showTemplateSelector();
+}
 
 function showTemplateSelector() {
   const overlay = document.getElementById('template-overlay');
@@ -2099,7 +2108,11 @@ async function openEmailModal(id) {
     const rows = await sbFetch('records', 'GET', null, `?id=eq.${id}&company_id=eq.${currentUser.company_id}`);
     const r = rows[0]; if (!r) return;
     document.getElementById('email-subject').value = `作業完了のご報告：${r.project}（${r.date}）`;
-    document.getElementById('email-body').value = `お世話になっております。\n${r.project}（${r.date}）の作業が完了しましたので、完了伝票PDFをお送りします。\nご確認のほど、よろしくお願いいたします。`;
+    const staffName = r.staff || '';
+    document.getElementById('email-staff-name').value = staffName;
+    const s2 = getSettings();
+    const companyFrom = s2.sender || currentUser.company || '';
+    document.getElementById('email-body').value = `お世話になっております。\n${r.project}（${r.date}）の作業が完了しましたので、完了伝票PDFをお送りします。\nご確認のほど、よろしくお願いいたします。\n\n─────────────────\n${companyFrom}\n担当：${staffName}`;
     document.getElementById('email-status').textContent = '';
     // 元請けプルダウンを更新
     const clients = await fetchClients();
@@ -2170,8 +2183,10 @@ async function sendEmail() {
     const pdfBase64 = pdfUri.split(',')[1];
     const filename  = '伝票_' + (r.project||'無題') + '_' + (r.date||'') + '.pdf';
 
+    const fromName   = s.sender || currentUser.company || 'AXIA Sign';
+    const staffName2 = document.getElementById('email-staff-name').value.trim();
     const payload = {
-      from: s.resendFrom,
+      from: fromName ? `${fromName} <${s.resendFrom}>` : s.resendFrom,
       to:   [to],
       ...(ccHq ? { cc: [s.resendFrom] } : {}),
       subject,
@@ -2186,6 +2201,22 @@ async function sendEmail() {
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.message || '送信失敗');
+
+    // 送信ログをSupabaseに保存
+    try {
+      await sbFetch('email_logs', 'POST', {
+        company_id:  currentUser.company_id,
+        record_id:   currentDetailId,
+        slip_no:     r.slip_no || '',
+        to_email:    to,
+        from_email:  s.resendFrom,
+        staff_name:  staffName2,
+        subject,
+        resend_id:   data.id || null,
+        status:      'sent',
+        sent_at:     new Date().toISOString(),
+      });
+    } catch { /* ログ保存失敗はサイレント */ }
 
     statusEl.style.color = 'var(--green-text)';
     statusEl.textContent = '✓ 送信しました（' + to + '）';
