@@ -426,6 +426,27 @@
         <button class="btn btn-ghost btn-sm" onclick="saveSettings()" style="margin-top:4px">設定を保存</button>
       </div>
 
+      <div class="card">
+        <div class="card-title">パスワード変更</div>
+        <div style="background:var(--amber-bg);border-radius:var(--radius);padding:10px 14px;font-size:12px;color:var(--amber-text);line-height:1.6;margin-bottom:14px;">
+          ⚠️ この会社のログインIDは全スタッフ共通です。パスワードを変更すると、<strong>同じ会社の全員が次回ログインから新しいパスワードを使う必要があります</strong>。変更後は必ずスタッフ全員に新パスワードを共有してください。
+        </div>
+        <div class="field">
+          <label>現在のパスワード</label>
+          <input type="password" id="pw-current" placeholder="現在のパスワード" autocomplete="current-password">
+        </div>
+        <div class="field">
+          <label>新しいパスワード</label>
+          <input type="password" id="pw-new" placeholder="6文字以上" autocomplete="new-password">
+        </div>
+        <div class="field">
+          <label>新しいパスワード（確認）</label>
+          <input type="password" id="pw-confirm" placeholder="もう一度入力" autocomplete="new-password">
+        </div>
+        <button class="btn btn-primary btn-sm" onclick="changePassword()">パスワードを変更する</button>
+      </div>
+
+
 
 
 
@@ -798,7 +819,13 @@ async function doLogin() {
       body: JSON.stringify({ email, password: pass })
     });
     const data = await res.json();
-    if (!res.ok) throw new Error(data.error_description || data.msg || 'ログイン失敗');
+    if (!res.ok) {
+      const msg = data.error_description || data.msg || '';
+      if (msg.toLowerCase().includes('banned') || msg.includes('停止')) {
+        throw new Error('このアカウントは停止されています。運営にお問い合わせください。');
+      }
+      throw new Error(msg || 'ログイン失敗');
+    }
     setTokens(data.access_token, data.refresh_token, data.expires_in);
     currentUser = { id: data.user.id, email: data.user.email, name: data.user.user_metadata?.name || rawId, company: data.user.user_metadata?.company || '', company_id: data.user.user_metadata?.company_id || data.user.id, token: data.access_token };
     localStorage.setItem('axia_user', JSON.stringify(currentUser));
@@ -1063,6 +1090,59 @@ function loadSettings() {
 function saveSettings() {
   const s = { sender: document.getElementById('s-sender').value.trim() };
   saveSettingsData(s); showToast('設定を保存しました');
+}
+
+// ════════════ パスワード変更 ════════════
+async function changePassword() {
+  const current = document.getElementById('pw-current').value;
+  const newPass = document.getElementById('pw-new').value;
+  const confirm  = document.getElementById('pw-confirm').value;
+
+  if (!current || !newPass || !confirm) { showToast('全項目を入力してください'); return; }
+  if (newPass.length < 6) { showToast('新しいパスワードは6文字以上にしてください'); return; }
+  if (newPass !== confirm) { showToast('新しいパスワードが一致しません'); return; }
+  if (newPass === current) { showToast('現在と同じパスワードです'); return; }
+
+  showLoading('確認中...');
+  try {
+    // ① 現在のパスワードが正しいか再認証で確認
+    const email = currentUser.email;
+    const checkRes = await fetch(`${SB_URL}/auth/v1/token?grant_type=password`, {
+      method: 'POST',
+      headers: { 'apikey': SB_ANON_KEY, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password: current })
+    });
+    if (!checkRes.ok) {
+      hideLoading();
+      showToast('現在のパスワードが正しくありません');
+      return;
+    }
+    const checkData = await checkRes.json();
+    const freshToken = checkData.access_token;
+
+    // ② パスワードを更新
+    showLoading('パスワードを変更中...');
+    const updateRes = await fetch(`${SB_URL}/auth/v1/user`, {
+      method: 'PUT',
+      headers: {
+        'apikey': SB_ANON_KEY,
+        'Authorization': 'Bearer ' + freshToken,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ password: newPass })
+    });
+    const updateData = await updateRes.json();
+    if (!updateRes.ok) throw new Error(updateData.msg || updateData.error_description || '変更に失敗しました');
+
+    // ③ 新しいトークンに更新（再ログイン不要に）
+    setTokens(checkData.access_token, checkData.refresh_token, checkData.expires_in);
+
+    hideLoading();
+    document.getElementById('pw-current').value = '';
+    document.getElementById('pw-new').value = '';
+    document.getElementById('pw-confirm').value = '';
+    showToast('パスワードを変更しました。他のスタッフへの共有を忘れずに');
+  } catch(e) { hideLoading(); showToast('エラー: ' + e.message); }
 }
 
 // ════════════ SCREEN ROUTING ════════════

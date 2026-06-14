@@ -416,6 +416,22 @@
   </div>
 </div>
 
+<!-- パスワード再発行モーダル -->
+<div class="modal-overlay" id="reset-pw-modal">
+  <div class="modal-box">
+    <div class="modal-title">パスワード再発行</div>
+    <p id="reset-pw-msg" style="font-size:13px;color:var(--text2);margin-bottom:16px;line-height:1.6;"></p>
+    <div style="background:var(--amber-bg);border-radius:8px;padding:10px 14px;font-size:12px;color:var(--amber-text);margin-bottom:16px;line-height:1.6;">
+      ⚠️ 新しいパスワードを発行すると、現在のパスワードは使用できなくなります。同じ会社の全スタッフに新しいパスワードを共有してください。
+    </div>
+    <div id="reset-pw-result" style="display:none;background:#d1fae5;border-radius:8px;padding:14px;font-size:13px;margin-bottom:16px;line-height:1.8;"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('reset-pw-modal')" id="reset-pw-cancel">キャンセル</button>
+      <button class="btn btn-primary" onclick="executeResetPassword()" id="reset-pw-btn">新しいパスワードを発行</button>
+    </div>
+  </div>
+</div>
+
 <!-- ロゴアップロードモーダル -->
 <div class="modal-overlay" id="logo-modal">
   <div class="modal-box">
@@ -726,8 +742,9 @@ function renderCompanies() {
             <option value="premium"  ${plan==='premium' ?'selected':''}>プレミアム</option>
           </select>
           ${isBanned
-            ? `<button class="btn btn-ghost btn-xs" style="color:var(--green-text);" onclick="unbanCompany('${c.company_id}','${esc(c.company_name)}')">解除</button>`
-            : `<button class="btn btn-xs" style="background:var(--red-bg);color:var(--red-text);border:none;" onclick="confirmBan('${c.company_id}','${esc(c.company_name)}')">停止</button>`}
+            ? `<button class="btn btn-ghost btn-xs" style="color:var(--green-text);" onclick="unbanCompany('${c.company_id}','${esc(c.company_name)}','${c.user_id}')">解除</button>`
+            : `<button class="btn btn-xs" style="background:var(--red-bg);color:var(--red-text);border:none;" onclick="confirmBan('${c.company_id}','${esc(c.company_name)}','${c.user_id}')">停止</button>`}
+          <button class="btn btn-ghost btn-xs" onclick="openResetPassword('${c.user_id}','${esc(c.company_name)}','${c.login_id}')">PW再発行</button>
         </div>
       </td>
     </tr>`;
@@ -751,28 +768,129 @@ function changePlan(companyId, plan) {
 
 // ── 垢バン
 let banTargetId = null;
-function confirmBan(companyId, name) {
+let banTargetUserId = null;
+function confirmBan(companyId, name, userId) {
   banTargetId = companyId;
+  banTargetUserId = userId;
   document.getElementById('ban-modal-msg').textContent =
     `「${name}」のアカウントを停止します。この会社のユーザーはログインできなくなります。よろしいですか？`;
   openModal('ban-modal');
 }
-function executeBan() {
+async function executeBan() {
   if (!banTargetId) return;
-  const banned = JSON.parse(localStorage.getItem('axia_banned') || '{}');
-  banned[banTargetId] = { at: new Date().toISOString() };
-  localStorage.setItem('axia_banned', JSON.stringify(banned));
-  closeModal('ban-modal');
-  banTargetId = null;
-  showToast('アカウントを停止しました');
-  renderCompanies();
+  showLoading('停止処理中...');
+  try {
+    if (banTargetUserId) {
+      const res = await fetch(`${SB_URL}/auth/v1/admin/users/${banTargetUserId}`, {
+        method: 'PUT',
+        headers: {
+          'apikey': SB_SERVICE_KEY,
+          'Authorization': 'Bearer ' + SB_SERVICE_KEY,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ ban_duration: '876000h' }) // 約100年=実質永久停止
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(()=>({}));
+        throw new Error(err.msg || err.error_description || '停止に失敗しました');
+      }
+    }
+    const banned = JSON.parse(localStorage.getItem('axia_banned') || '{}');
+    banned[banTargetId] = { at: new Date().toISOString() };
+    localStorage.setItem('axia_banned', JSON.stringify(banned));
+    hideLoading();
+    closeModal('ban-modal');
+    banTargetId = null; banTargetUserId = null;
+    showToast('アカウントを停止しました');
+    renderCompanies();
+  } catch(e) { hideLoading(); showToast('エラー: ' + e.message); }
 }
-function unbanCompany(companyId, name) {
-  const banned = JSON.parse(localStorage.getItem('axia_banned') || '{}');
-  delete banned[companyId];
-  localStorage.setItem('axia_banned', JSON.stringify(banned));
-  showToast(`「${name}」の停止を解除しました`);
-  renderCompanies();
+async function unbanCompany(companyId, name, userId) {
+  showLoading('解除処理中...');
+  try {
+    if (userId) {
+      const res = await fetch(`${SB_URL}/auth/v1/admin/users/${userId}`, {
+        method: 'PUT',
+        headers: {
+          'apikey': SB_SERVICE_KEY,
+          'Authorization': 'Bearer ' + SB_SERVICE_KEY,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ ban_duration: 'none' })
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(()=>({}));
+        throw new Error(err.msg || err.error_description || '解除に失敗しました');
+      }
+    }
+    const banned = JSON.parse(localStorage.getItem('axia_banned') || '{}');
+    delete banned[companyId];
+    localStorage.setItem('axia_banned', JSON.stringify(banned));
+    hideLoading();
+    showToast(`「${name}」の停止を解除しました`);
+    renderCompanies();
+  } catch(e) { hideLoading(); showToast('エラー: ' + e.message); }
+}
+
+// ── パスワード再発行
+let resetTargetUserId  = null;
+let resetTargetName    = null;
+let resetTargetLoginId = null;
+
+function openResetPassword(userId, name, loginId) {
+  if (!userId) { showToast('ユーザーIDが取得できませんでした'); return; }
+  resetTargetUserId  = userId;
+  resetTargetName    = name;
+  resetTargetLoginId = loginId;
+  document.getElementById('reset-pw-msg').textContent =
+    `「${name}」（ログインID: ${loginId}）のパスワードを再発行します。`;
+  document.getElementById('reset-pw-result').style.display = 'none';
+  document.getElementById('reset-pw-btn').style.display = '';
+  document.getElementById('reset-pw-btn').disabled = false;
+  document.getElementById('reset-pw-btn').textContent = '新しいパスワードを発行';
+  document.getElementById('reset-pw-cancel').textContent = 'キャンセル';
+  document.getElementById('reset-pw-cancel').onclick = () => closeModal('reset-pw-modal');
+  openModal('reset-pw-modal');
+}
+
+async function executeResetPassword() {
+  if (!resetTargetUserId) return;
+  const chars = 'abcdefghjkmnpqrstuvwxyzABCDEFGHJKMNPQRSTUVWXYZ23456789!@#';
+  let newPass = '';
+  for (let i = 0; i < 12; i++) newPass += chars[Math.floor(Math.random() * chars.length)];
+
+  document.getElementById('reset-pw-btn').disabled = true;
+  showLoading('パスワードを再発行中...');
+  try {
+    const res = await fetch(`${SB_URL}/auth/v1/admin/users/${resetTargetUserId}`, {
+      method: 'PUT',
+      headers: {
+        'apikey': SB_SERVICE_KEY,
+        'Authorization': 'Bearer ' + SB_SERVICE_KEY,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ password: newPass })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.msg || data.error_description || '再発行に失敗しました');
+
+    hideLoading();
+    const resultEl = document.getElementById('reset-pw-result');
+    resultEl.innerHTML = `
+      ✅ <strong>${resetTargetName}</strong> のパスワードを再発行しました。<br><br>
+      <strong>ログインID：</strong><code style="background:#fff;padding:2px 6px;border-radius:4px;">${resetTargetLoginId}</code><br>
+      <strong>新パスワード：</strong><code style="background:#fff;padding:2px 6px;border-radius:4px;">${newPass}</code><br><br>
+      この情報を会社の担当者に共有してください。
+    `;
+    resultEl.style.display = '';
+    document.getElementById('reset-pw-btn').style.display = 'none';
+    document.getElementById('reset-pw-cancel').textContent = '閉じる';
+    showToast('パスワードを再発行しました');
+  } catch(e) {
+    hideLoading();
+    document.getElementById('reset-pw-btn').disabled = false;
+    showToast('エラー: ' + e.message);
+  }
 }
 
 function openAddCompanyModal() {
