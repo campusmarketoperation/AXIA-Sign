@@ -432,6 +432,72 @@
   </div>
 </div>
 
+<!-- カスタマイズモーダル -->
+<div class="modal-overlay" id="customize-modal">
+  <div class="modal-box" style="width:620px;max-height:85vh;overflow-y:auto;">
+    <div class="modal-title">カスタマイズ設定</div>
+    <div id="customize-company-name" style="font-size:13px;color:var(--text2);margin-bottom:16px;"></div>
+
+    <!-- タブ -->
+    <div style="display:flex;gap:6px;margin-bottom:18px;border-bottom:1px solid var(--border);">
+      <button class="cz-tab active" data-tab="templates" onclick="switchCzTab('templates')" style="padding:8px 14px;font-size:13px;font-weight:500;background:none;border:none;border-bottom:2px solid var(--text);cursor:pointer;">職種テンプレート</button>
+      <button class="cz-tab" data-tab="home" onclick="switchCzTab('home')" style="padding:8px 14px;font-size:13px;font-weight:500;background:none;border:none;border-bottom:2px solid transparent;cursor:pointer;color:var(--text2);">ホーム表示</button>
+      <button class="cz-tab" data-tab="features" onclick="switchCzTab('features')" style="padding:8px 14px;font-size:13px;font-weight:500;background:none;border:none;border-bottom:2px solid transparent;cursor:pointer;color:var(--text2);">機能制限</button>
+    </div>
+
+    <!-- 職種テンプレート -->
+    <div class="cz-panel" data-panel="templates">
+      <p style="font-size:12px;color:var(--text2);margin-bottom:12px;line-height:1.6;">この会社で使う職種テンプレートとチェックリスト項目を編集します。チェックリスト項目は全テンプレート共通です（最大8件）。</p>
+
+      <div style="margin-bottom:16px;">
+        <label style="display:block;font-size:12px;font-weight:500;margin-bottom:6px;color:var(--text2);">チェックリスト項目（1行1項目、最大8件）</label>
+        <textarea id="cz-checklist" rows="8" oninput="refreshCzTemplateChecks()" style="width:100%;padding:9px 12px;border:1px solid var(--border2);border-radius:8px;font-size:13px;background:var(--bg);font-family:monospace;" placeholder="設備の巡回・点検&#10;清掃作業&#10;一般廃棄物の処理&#10;..."></textarea>
+      </div>
+
+      <div id="cz-templates-list"></div>
+      <button class="btn btn-ghost btn-sm" onclick="addCzTemplate()" style="margin-top:10px;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        テンプレートを追加
+      </button>
+    </div>
+
+    <!-- ホーム表示 -->
+    <div class="cz-panel" data-panel="home" style="display:none;">
+      <p style="font-size:12px;color:var(--text2);margin-bottom:14px;line-height:1.6;">ホーム画面に表示するセクションを選択します。</p>
+      <label style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:0.5px solid var(--border);cursor:pointer;">
+        <input type="checkbox" id="cz-show-stats" style="width:16px;height:16px;">
+        <div><div style="font-size:13px;font-weight:500;">統計表示</div><div style="font-size:11px;color:var(--text3);">総伝票数・今日・サイン済みの件数</div></div>
+      </label>
+      <label style="display:flex;align-items:center;gap:10px;padding:10px 0;cursor:pointer;">
+        <input type="checkbox" id="cz-show-recent" style="width:16px;height:16px;">
+        <div><div style="font-size:13px;font-weight:500;">最近の伝票</div><div style="font-size:11px;color:var(--text3);">ホーム画面下部の最近作成した伝票一覧</div></div>
+      </label>
+    </div>
+
+    <!-- 機能制限 -->
+    <div class="cz-panel" data-panel="features" style="display:none;">
+      <p style="font-size:12px;color:var(--text2);margin-bottom:14px;line-height:1.6;">プランに応じて機能のON/OFFを個別に設定できます。</p>
+      <label style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:0.5px solid var(--border);cursor:pointer;">
+        <input type="checkbox" id="cz-feat-csv" style="width:16px;height:16px;">
+        <div><div style="font-size:13px;font-weight:500;">給与ソフトCSVエクスポート</div><div style="font-size:11px;color:var(--text3);">KING OF TIME・マネーフォワード等への出力</div></div>
+      </label>
+      <label style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:0.5px solid var(--border);cursor:pointer;">
+        <input type="checkbox" id="cz-feat-email" style="width:16px;height:16px;">
+        <div><div style="font-size:13px;font-weight:500;">メール送信</div><div style="font-size:11px;color:var(--text3);">Resend APIによるPDFメール送信</div></div>
+      </label>
+      <label style="display:flex;align-items:center;gap:10px;padding:10px 0;cursor:pointer;">
+        <input type="checkbox" id="cz-feat-client" style="width:16px;height:16px;">
+        <div><div style="font-size:13px;font-weight:500;">元請け企業マスター</div><div style="font-size:11px;color:var(--text3);">送信先企業の登録・管理</div></div>
+      </label>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('customize-modal')">キャンセル</button>
+      <button class="btn btn-primary" onclick="saveCustomize()">保存</button>
+    </div>
+  </div>
+</div>
+
 <!-- ロゴアップロードモーダル -->
 <div class="modal-overlay" id="logo-modal">
   <div class="modal-box">
@@ -560,20 +626,23 @@ document.getElementById('admin-pass').addEventListener('keydown', e => { if (e.k
 // ════════════════════════════════════════
 // Supabase fetch（service_role keyなしのため anon keyで全社取得）
 // ════════════════════════════════════════
-async function sbAll(table, query = '') {
+async function sbAll(table, query = '', options = {}) {
   const res = await fetch(`${SB_URL}/rest/v1/${table}${query}`, {
+    method: options.method || 'GET',
     headers: {
       'apikey': SB_SERVICE_KEY,
       'Authorization': 'Bearer ' + SB_SERVICE_KEY,
       'Content-Type': 'application/json',
       'Prefer': 'return=representation',
       'Range': '0-9999',
-    }
+    },
+    ...(options.body ? { body: options.body } : {}),
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
     throw new Error(err.message || `HTTP ${res.status}`);
   }
+  if (res.status === 204) return [];
   return res.json();
 }
 
@@ -745,6 +814,7 @@ function renderCompanies() {
             ? `<button class="btn btn-ghost btn-xs" style="color:var(--green-text);" onclick="unbanCompany('${c.company_id}','${esc(c.company_name)}','${c.user_id}')">解除</button>`
             : `<button class="btn btn-xs" style="background:var(--red-bg);color:var(--red-text);border:none;" onclick="confirmBan('${c.company_id}','${esc(c.company_name)}','${c.user_id}')">停止</button>`}
           <button class="btn btn-ghost btn-xs" onclick="openResetPassword('${c.user_id}','${esc(c.company_name)}','${c.login_id}')">PW再発行</button>
+          <button class="btn btn-ghost btn-xs" onclick="openCustomize('${c.company_id}','${esc(c.company_name)}')">カスタマイズ</button>
         </div>
       </td>
     </tr>`;
@@ -758,12 +828,209 @@ function clearCompanyFilter() {
   renderCompanies();
 }
 
-function changePlan(companyId, plan) {
+async function changePlan(companyId, plan) {
   const plans = JSON.parse(localStorage.getItem('axia_plans') || '{}');
   plans[companyId] = plan;
   localStorage.setItem('axia_plans', JSON.stringify(plans));
+
+  // company_settings テーブルにも反映（プラン上限チェックに使われる）
+  try {
+    await upsertCompanySettings(companyId, { plan });
+  } catch(e) { console.error('plan sync error', e); }
+
   showToast('プランを変更しました');
   renderCompanies();
+}
+
+// company_settings へのupsert（既存があればPATCH、なければPOST）
+async function upsertCompanySettings(companyId, patch) {
+  const existing = await sbAll('company_settings', `?company_id=eq.${companyId}`).catch(()=>[]);
+  if (existing && existing.length) {
+    await fetch(`${SB_URL}/rest/v1/company_settings?company_id=eq.${companyId}`, {
+      method: 'PATCH',
+      headers: {
+        'apikey': SB_SERVICE_KEY,
+        'Authorization': 'Bearer ' + SB_SERVICE_KEY,
+        'Content-Type': 'application/json',
+        'Prefer': 'return=representation',
+      },
+      body: JSON.stringify({ ...patch, updated_at: new Date().toISOString() })
+    });
+  } else {
+    await fetch(`${SB_URL}/rest/v1/company_settings`, {
+      method: 'POST',
+      headers: {
+        'apikey': SB_SERVICE_KEY,
+        'Authorization': 'Bearer ' + SB_SERVICE_KEY,
+        'Content-Type': 'application/json',
+        'Prefer': 'return=representation',
+      },
+      body: JSON.stringify({ company_id: companyId, ...patch })
+    });
+  }
+}
+
+async function fetchCompanySettings(companyId) {
+  const rows = await sbAll('company_settings', `?company_id=eq.${companyId}`).catch(()=>[]);
+  return rows && rows[0] ? rows[0] : null;
+}
+
+// ════════════════════════════════════════
+// カスタマイズモーダル
+// ════════════════════════════════════════
+let czTargetCompanyId = null;
+const DEFAULT_CHECKLIST = ['設備の巡回・点検','清掃作業','一般廃棄物の処理','非業自らの発生ゴミ処理','工事関係車両・音響の管理','廃材回収・運搬作業','交互通行','その他'];
+const DEFAULT_TEMPLATES = {
+  traffic:  { label: '交通誘導', emoji: '🚦', checkLabels: ['工事関係車両・音響の管理', '交互通行', 'その他'] },
+  facility: { label: '施設警備', emoji: '🏢', checkLabels: ['設備の巡回・点検', '一般廃棄物の処理', 'その他'] },
+  event:    { label: 'イベント', emoji: '🎪', checkLabels: ['工事関係車両・音響の管理', 'その他'] },
+};
+
+function switchCzTab(tab) {
+  document.querySelectorAll('.cz-tab').forEach(t => {
+    const active = t.dataset.tab === tab;
+    t.classList.toggle('active', active);
+    t.style.borderBottomColor = active ? 'var(--text)' : 'transparent';
+    t.style.color = active ? 'var(--text)' : 'var(--text2)';
+  });
+  document.querySelectorAll('.cz-panel').forEach(p => {
+    p.style.display = p.dataset.panel === tab ? '' : 'none';
+  });
+}
+
+async function openCustomize(companyId, companyName) {
+  czTargetCompanyId = companyId;
+  document.getElementById('customize-company-name').textContent = `${companyName}（${companyId}）`;
+  switchCzTab('templates');
+
+  showLoading('設定を読み込み中...');
+  try {
+    const settings = await fetchCompanySettings(companyId);
+    const templates   = (settings?.templates && Object.keys(settings.templates).length) ? settings.templates : DEFAULT_TEMPLATES;
+    const checklist   = Array.isArray(settings?.templates?._checklist_labels) ? settings.templates._checklist_labels : DEFAULT_CHECKLIST;
+    const homeLayout  = settings?.home_layout || {};
+    const flags       = settings?.feature_flags || {};
+
+    document.getElementById('cz-checklist').value = checklist.join('\n');
+    document.getElementById('cz-show-stats').checked  = homeLayout.show_stats  !== false;
+    document.getElementById('cz-show-recent').checked = homeLayout.show_recent !== false;
+    document.getElementById('cz-feat-csv').checked    = flags.csv_export    !== false;
+    document.getElementById('cz-feat-email').checked  = flags.email_send    !== false;
+    document.getElementById('cz-feat-client').checked = flags.client_master !== false;
+
+    renderCzTemplates(templates);
+  } catch(e) {
+    showToast('エラー: ' + e.message);
+    renderCzTemplates(DEFAULT_TEMPLATES);
+    document.getElementById('cz-checklist').value = DEFAULT_CHECKLIST.join('\n');
+  }
+  hideLoading();
+  openModal('customize-modal');
+}
+
+function renderCzTemplates(templates) {
+  const container = document.getElementById('cz-templates-list');
+  const entries = Object.entries(templates).filter(([k]) => k !== '_checklist_labels');
+  container.innerHTML = entries.map(([key, t], i) => `
+    <div class="cz-template-row" data-key="${key}" style="border:1px solid var(--border2);border-radius:8px;padding:12px;margin-bottom:8px;">
+      <div style="display:flex;gap:8px;margin-bottom:8px;">
+        <input type="text" class="cz-tpl-emoji" value="${t.emoji||''}" placeholder="🚦" style="width:50px;text-align:center;padding:9px 6px;border:1px solid var(--border2);border-radius:8px;font-size:16px;background:var(--bg);">
+        <input type="text" class="cz-tpl-label" value="${t.label||''}" placeholder="職種名（例：交通誘導）" style="flex:1;padding:9px 12px;border:1px solid var(--border2);border-radius:8px;font-size:13px;background:var(--bg);">
+        <button class="btn btn-danger btn-xs" onclick="removeCzTemplate(this)" style="flex-shrink:0;">削除</button>
+      </div>
+      <div style="font-size:11px;color:var(--text2);margin-bottom:4px;">この職種で自動チェックする項目</div>
+      <div class="cz-tpl-checks" style="display:flex;flex-wrap:wrap;gap:6px;"></div>
+    </div>`).join('');
+
+  // チェック項目チェックボックスを現在のチェックリストに基づいて生成
+  refreshCzTemplateChecks();
+
+  // 保存済みのcheckLabelsを反映
+  entries.forEach(([key, t]) => {
+    const row = container.querySelector(`.cz-template-row[data-key="${key}"]`);
+    if (!row) return;
+    (t.checkLabels||[]).forEach(label => {
+      const cb = row.querySelector(`input[type=checkbox][value="${label}"]`);
+      if (cb) cb.checked = true;
+    });
+  });
+}
+
+// チェックリスト欄が変更されたら、各テンプレートのチェック項目候補を更新
+function refreshCzTemplateChecks() {
+  const labels = document.getElementById('cz-checklist').value.split('\n').map(s=>s.trim()).filter(Boolean);
+  document.querySelectorAll('.cz-template-row').forEach(row => {
+    const checksEl = row.querySelector('.cz-tpl-checks');
+    const prevChecked = new Set(
+      Array.from(checksEl.querySelectorAll('input:checked')).map(cb => cb.value)
+    );
+    checksEl.innerHTML = labels.map(label => `
+      <label style="display:flex;align-items:center;gap:4px;font-size:11px;background:var(--surface2);border-radius:6px;padding:3px 8px;cursor:pointer;">
+        <input type="checkbox" value="${label.replace(/"/g,'&quot;')}" style="width:13px;height:13px;" ${prevChecked.has(label)?'checked':''}>
+        ${label}
+      </label>`).join('');
+  });
+}
+
+function addCzTemplate() {
+  const container = document.getElementById('cz-templates-list');
+  const key = 'tpl_' + Math.random().toString(36).slice(2,8);
+  const div = document.createElement('div');
+  div.className = 'cz-template-row';
+  div.dataset.key = key;
+  div.style.cssText = 'border:1px solid var(--border2);border-radius:8px;padding:12px;margin-bottom:8px;';
+  div.innerHTML = `
+      <div style="display:flex;gap:8px;margin-bottom:8px;">
+        <input type="text" class="cz-tpl-emoji" value="🔧" style="width:50px;text-align:center;padding:9px 6px;border:1px solid var(--border2);border-radius:8px;font-size:16px;background:var(--bg);">
+        <input type="text" class="cz-tpl-label" value="" placeholder="職種名（例：交通誘導）" style="flex:1;padding:9px 12px;border:1px solid var(--border2);border-radius:8px;font-size:13px;background:var(--bg);">
+        <button class="btn btn-danger btn-xs" onclick="removeCzTemplate(this)" style="flex-shrink:0;">削除</button>
+      </div>
+      <div style="font-size:11px;color:var(--text2);margin-bottom:4px;">この職種で自動チェックする項目</div>
+      <div class="cz-tpl-checks" style="display:flex;flex-wrap:wrap;gap:6px;"></div>`;
+  container.appendChild(div);
+  refreshCzTemplateChecks();
+}
+
+function removeCzTemplate(btn) {
+  btn.closest('.cz-template-row').remove();
+}
+
+async function saveCustomize() {
+  if (!czTargetCompanyId) return;
+
+  // チェックリスト項目（最大8件）
+  const checklist = document.getElementById('cz-checklist').value
+    .split('\n').map(s=>s.trim()).filter(Boolean).slice(0, 8);
+
+  // テンプレート
+  const templates = {};
+  document.querySelectorAll('.cz-template-row').forEach(row => {
+    const key   = row.dataset.key;
+    const emoji = row.querySelector('.cz-tpl-emoji').value.trim() || '🔧';
+    const label = row.querySelector('.cz-tpl-label').value.trim();
+    if (!label) return; // 名前が空のテンプレートはスキップ
+    const checkLabels = Array.from(row.querySelectorAll('.cz-tpl-checks input:checked')).map(cb => cb.value);
+    templates[key] = { label, emoji, checkLabels };
+  });
+  templates._checklist_labels = checklist;
+
+  const home_layout = {
+    show_stats:  document.getElementById('cz-show-stats').checked,
+    show_recent: document.getElementById('cz-show-recent').checked,
+  };
+  const feature_flags = {
+    csv_export:    document.getElementById('cz-feat-csv').checked,
+    email_send:    document.getElementById('cz-feat-email').checked,
+    client_master: document.getElementById('cz-feat-client').checked,
+  };
+
+  showLoading('保存中...');
+  try {
+    await upsertCompanySettings(czTargetCompanyId, { templates, home_layout, feature_flags });
+    hideLoading();
+    closeModal('customize-modal');
+    showToast('カスタマイズ設定を保存しました');
+  } catch(e) { hideLoading(); showToast('エラー: ' + e.message); }
 }
 
 // ── 垢バン
@@ -1029,7 +1296,10 @@ function renderAllRecords() {
       <td>${r.hours||'—'}h</td>
       <td>${r.has_sig ? '<span class="badge badge-green">✓</span>' : '<span class="badge badge-gray">未</span>'}</td>
       <td style="font-size:11px;color:var(--text2);">${r.created_at ? new Date(r.created_at).toLocaleDateString('ja-JP') : '—'}</td>
-    </tr>`).join('') || '<tr><td colspan="9" style="text-align:center;color:var(--text3);padding:20px;">該当なし</td></tr>';
+      <td>
+        ${r.sig_data ? `<button class="btn btn-ghost btn-xs" onclick="viewRecordSig('${r.company_id}', ${r.id})">サイン確認</button>` : '—'}
+      </td>
+    </tr>`).join('') || '<tr><td colspan="10" style="text-align:center;color:var(--text3);padding:20px;">該当なし</td></tr>';
 
   // ページャー
   const totalPages = Math.ceil(total / REC_PER_PAGE);
@@ -1046,7 +1316,21 @@ function renderAllRecords() {
   }
 }
 
-function clearRecordFilter() {
+function viewRecordSig(companyId, recordId) {
+  const r = allRecords.find(x => x.company_id === companyId && x.id === recordId);
+  if (!r || !r.sig_data) { showToast('サインデータがありません'); return; }
+  const w = window.open('', '_blank', 'width=500,height=400');
+  w.document.write(`
+    <html><head><title>サイン確認 - ${r.slip_no||recordId}</title></head>
+    <body style="margin:0;display:flex;align-items:center;justify-content:center;background:#f5f4f0;height:100vh;font-family:sans-serif;">
+      <div style="background:#fff;border-radius:12px;padding:20px;box-shadow:0 2px 12px rgba(0,0,0,0.1);">
+        <div style="font-size:13px;color:#6b6963;margin-bottom:10px;">${r.project||''} ／ ${r.site||''} ／ ${r.date||''}</div>
+        <img src="${r.sig_data}" style="max-width:400px;border:1px solid #e8e7e3;border-radius:8px;">
+      </div>
+    </body></html>`);
+}
+
+
   document.getElementById('rec-search').value = '';
   document.getElementById('rec-date-from').value = '';
   document.getElementById('rec-date-to').value = '';
@@ -1234,48 +1518,64 @@ async function loadUsage() {
 // ════════════════════════════════════════
 // お知らせ管理（localStorageベース）
 // ════════════════════════════════════════
-function loadAnnounce() { renderAnnounce(); }
+async function loadAnnounce() {
+  showLoading('お知らせを読み込み中...');
+  try {
+    await renderAnnounce();
+  } catch(e) { showToast('エラー: ' + e.message); }
+  hideLoading();
+}
 
-function renderAnnounce() {
-  const announcements = JSON.parse(localStorage.getItem('axia_announcements') || '[]');
+async function renderAnnounce() {
+  const announcements = await sbAll('announcements', '?order=created_at.desc');
   const el = document.getElementById('announce-list');
   if (!announcements.length) {
     el.innerHTML = '<p style="font-size:13px;color:var(--text3);">公開中のお知らせはありません</p>';
     return;
   }
   const icons = { info: '📢', warning: '⚠️', maintenance: '🔧' };
-  el.innerHTML = announcements.map((a, i) => `
+  el.innerHTML = announcements.map((a) => `
     <div style="padding:12px 0;border-bottom:0.5px solid var(--border);display:flex;align-items:flex-start;justify-content:space-between;gap:12px;">
       <div style="flex:1;">
         <div style="font-size:13px;font-weight:600;">${icons[a.type]||'📢'} ${a.title}</div>
         <div style="font-size:12px;color:var(--text2);margin-top:3px;line-height:1.5;">${a.body}</div>
-        <div style="font-size:11px;color:var(--text3);margin-top:4px;">公開: ${a.created_at?.slice(0,10)} ${a.expires ? '/ 期限: '+a.expires : ''}</div>
+        <div style="font-size:11px;color:var(--text3);margin-top:4px;">公開: ${a.created_at?.slice(0,10)} ${a.expires_at ? '/ 期限: '+a.expires_at : ''}</div>
       </div>
-      <button class="btn btn-danger btn-xs" onclick="deleteAnnounce(${i})">削除</button>
+      <button class="btn btn-danger btn-xs" onclick="deleteAnnounce(${a.id})">削除</button>
     </div>`).join('');
 }
 
-function saveAnnounce() {
+async function saveAnnounce() {
   const title   = document.getElementById('ann-title').value.trim();
   const body    = document.getElementById('ann-body').value.trim();
   const type    = document.getElementById('ann-type').value;
   const expires = document.getElementById('ann-expires').value;
   if (!title || !body) { showToast('タイトルと本文を入力してください'); return; }
-  const list = JSON.parse(localStorage.getItem('axia_announcements') || '[]');
-  list.unshift({ title, body, type, expires, created_at: new Date().toISOString() });
-  localStorage.setItem('axia_announcements', JSON.stringify(list));
-  document.getElementById('ann-title').value = '';
-  document.getElementById('ann-body').value  = '';
-  renderAnnounce();
-  showToast('お知らせを公開しました');
+
+  showLoading('公開中...');
+  try {
+    await sbAll('announcements', '', {
+      method: 'POST',
+      body: JSON.stringify({ title, body, type, expires_at: expires || null })
+    });
+    document.getElementById('ann-title').value = '';
+    document.getElementById('ann-body').value  = '';
+    document.getElementById('ann-expires').value = '';
+    await renderAnnounce();
+    hideLoading();
+    showToast('お知らせを公開しました');
+  } catch(e) { hideLoading(); showToast('エラー: ' + e.message); }
 }
 
-function deleteAnnounce(i) {
-  const list = JSON.parse(localStorage.getItem('axia_announcements') || '[]');
-  list.splice(i, 1);
-  localStorage.setItem('axia_announcements', JSON.stringify(list));
-  renderAnnounce();
-  showToast('削除しました');
+async function deleteAnnounce(id) {
+  if (!confirm('このお知らせを削除しますか？')) return;
+  showLoading('削除中...');
+  try {
+    await sbAll(`announcements?id=eq.${id}`, '', { method: 'DELETE' });
+    await renderAnnounce();
+    hideLoading();
+    showToast('削除しました');
+  } catch(e) { hideLoading(); showToast('エラー: ' + e.message); }
 }
 
 // ════════════════════════════════════════
@@ -1385,20 +1685,48 @@ function renderImpersonateList() {
     </div>`).join('') || '<p style="color:var(--text3);font-size:13px;">該当なし</p>';
 }
 
-function startImpersonate(companyId, companyName, loginId) {
-  if (!confirm(`「${companyName}」の画面を代理ログインで開きます。
-ログインID: ${loginId}
+async function startImpersonate(companyId, companyName, loginId) {
+  const userId = allCompanies.find(c => c.company_id === companyId)?.user_id;
+  if (!userId) { showToast('ユーザーIDが取得できませんでした'); return; }
+  if (!confirm(`「${companyName}」の画面に代理ログインします。\nログインID: ${loginId}\n\n一時的にパスワードが変更されます。よろしいですか？`)) return;
 
-よろしいですか？`)) return;
-  // 新しいタブでindex.htmlを開き、代理ログイン情報をsessionStorageに渡す
-  const info = JSON.stringify({ companyId, companyName, loginId, byAdmin: adminUser.email, at: new Date().toISOString() });
-  sessionStorage.setItem('axia_impersonate', info);
-  window.open('index.html', '_blank');
-  showToast(`「${companyName}」の画面を別タブで開きました`);
-  // 操作ログを記録
-  const log = JSON.parse(localStorage.getItem('axia_impersonate_log') || '[]');
-  log.unshift({ companyId, companyName, loginId, by: adminUser.email, at: new Date().toISOString() });
-  localStorage.setItem('axia_impersonate_log', JSON.stringify(log.slice(0, 50)));
+  showLoading('代理ログイン準備中...');
+  try {
+    // 一時パスワードを生成してこの会社のアカウントに設定
+    const chars = 'abcdefghjkmnpqrstuvwxyzABCDEFGHJKMNPQRSTUVWXYZ23456789';
+    let tempPass = 'imp_';
+    for (let i = 0; i < 16; i++) tempPass += chars[Math.floor(Math.random() * chars.length)];
+
+    const res = await fetch(`${SB_URL}/auth/v1/admin/users/${userId}`, {
+      method: 'PUT',
+      headers: {
+        'apikey': SB_SERVICE_KEY,
+        'Authorization': 'Bearer ' + SB_SERVICE_KEY,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ password: tempPass })
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(()=>({}));
+      throw new Error(err.msg || err.error_description || '準備に失敗しました');
+    }
+
+    hideLoading();
+
+    // index.html を代理ログイン用パラメータ付きで新タブで開く
+    const url = `index.html?imp_id=${encodeURIComponent(loginId)}&imp_pw=${encodeURIComponent(tempPass)}`;
+    const newTab = window.open(url, '_blank');
+    if (!newTab || newTab.closed || typeof newTab.closed === 'undefined') {
+      showToast('⚠️ ポップアップがブロックされました。ブラウザの設定でこのサイトのポップアップを許可してください');
+    } else {
+      showToast(`「${companyName}」の画面を別タブで開きました`);
+    }
+
+    // 操作ログを記録
+    const log = JSON.parse(localStorage.getItem('axia_impersonate_log') || '[]');
+    log.unshift({ companyId, companyName, loginId, by: adminUser.email, at: new Date().toISOString() });
+    localStorage.setItem('axia_impersonate_log', JSON.stringify(log.slice(0, 50)));
+  } catch(e) { hideLoading(); showToast('エラー: ' + e.message); }
 }
 
 </script>
