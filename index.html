@@ -266,12 +266,7 @@
         <div class="form-row">
           <div class="field">
             <label>伝票No. <span style="color:var(--text3);font-weight:400">（自動生成）</span></label>
-            <div style="display:flex;gap:6px;align-items:center;">
-              <input type="text" id="f-slip-no" readonly style="background:var(--surface2);font-family:monospace;font-weight:600;letter-spacing:0.08em;flex:1;color:var(--text);" placeholder="自動生成中...">
-              <button type="button" onclick="manualEditSlipNo()" title="手動で編集" style="flex-shrink:0;background:var(--surface2);border:0.5px solid var(--border2);border-radius:var(--radius);width:34px;height:42px;display:flex;align-items:center;justify-content:center;cursor:pointer;">
-                <svg viewBox="0 0 24 24" fill="none" stroke="var(--text2)" stroke-width="2" width="15" height="15"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-              </button>
-            </div>
+            <input type="text" id="f-slip-no" readonly style="background:var(--surface2);font-family:monospace;font-weight:600;letter-spacing:0.08em;color:var(--text);" placeholder="自動生成中...">
           </div>
           <div class="field"><label>稼働日 *</label><input type="date" id="f-date" onchange="onDateChange()"></div>
         </div>
@@ -360,13 +355,30 @@
         <div class="card-title">金額</div>
         <div class="form-row">
           <div class="field">
-            <label>単価（円/h）</label>
-            <input type="number" id="f-unit-price" placeholder="例：1500" min="0" step="1" oninput="calcAmount()">
+            <label>普通単価（円/h）</label>
+            <input type="number" id="f-unit-price" placeholder="例：1500" min="0" step="1" oninput="onBasePriceInput()">
+          </div>
+          <div class="field">
+            <label>深夜単価（円/h） <span style="color:var(--text3);font-weight:400">（25%増）</span></label>
+            <input type="number" id="f-unit-price-late" placeholder="例：1875" min="0" step="1" oninput="calcAmount()">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="field">
+            <label>早朝単価（円/h） <span style="color:var(--text3);font-weight:400">（25%増）</span></label>
+            <input type="number" id="f-unit-price-early" placeholder="例：1875" min="0" step="1" oninput="calcAmount()">
           </div>
           <div class="field">
             <label>合計金額（自動計算）</label>
             <input type="text" id="f-amount" readonly style="background:var(--surface2);font-weight:600;" placeholder="0円">
           </div>
+        </div>
+        <div id="amount-breakdown" style="font-size:12px;color:var(--text2);line-height:1.8;margin-top:6px;display:none;"></div>
+      </div>
+
+      <div style="background:var(--amber-bg);border-radius:var(--radius);padding:12px 14px;margin-bottom:1rem;display:flex;gap:10px;align-items:flex-start">
+        <div style="font-size:12px;color:var(--amber-text);line-height:1.6;">
+          深夜・早朝単価は普通単価の25%増を初期値として自動入力されますが、手動で変更できます。
         </div>
       </div>
 
@@ -878,7 +890,7 @@ async function enterApp() {
 function setGreeting() {
   const h = new Date().getHours();
   const g = h < 12 ? 'おはようございます' : h < 18 ? 'こんにちは' : 'お疲れ様です';
-  document.getElementById('home-greeting').textContent = g + '、' + (currentUser.name || '') + 'さん';
+  document.getElementById('home-greeting').textContent = g + '、' + (currentUser.company || currentUser.name || '') + 'さん';
 }
 
 // ════════════ STAFF MANAGEMENT ════════════
@@ -1055,26 +1067,10 @@ async function generateSlipNo(dateVal) {
   }
 }
 
-function manualEditSlipNo() {
-  const el = document.getElementById('f-slip-no');
-  if (!el) return;
-  if (el.readOnly) {
-    el.readOnly = false;
-    el.style.background = '';
-    el.style.fontFamily = 'monospace';
-    el.focus();
-    el.select();
-    showToast('手動で伝票番号を編集できます');
-  } else {
-    el.readOnly = true;
-    el.style.background = 'var(--surface2)';
-  }
-}
-
 // 稼働日変更時に伝票番号を再生成
 async function onDateChange() {
   const el = document.getElementById('f-slip-no');
-  if (!el || !el.readOnly) return; // 手動編集中はスキップ
+  if (!el) return;
   el.value = '生成中...';
   el.value = await generateSlipNo();
 }
@@ -1229,6 +1225,22 @@ function calcHours(start, end, breakH) {
   // ※ 休憩はworkMinで既に除外済みのため、ここでは再減算しない
   return { total: normal+late+early, normal: Math.round(normal*10)/10, late: Math.round(late*10)/10, early: Math.round(early*10)/10 };
 }
+
+// 普通・深夜・早朝それぞれの単価から合計金額を算出（共通ヘルパー）
+function calcAmountFromRecord(r, tNormal, tLate, tEarly) {
+  const baseP  = r.unit_price       || 0;
+  const lateP  = r.unit_price_late  || baseP;
+  const earlyP = r.unit_price_early || baseP;
+  const amountNormal = Math.round(baseP  * tNormal);
+  const amountLate   = Math.round(lateP  * tLate);
+  const amountEarly  = Math.round(earlyP * tEarly);
+  return {
+    amountNormal, amountLate, amountEarly,
+    total: amountNormal + amountLate + amountEarly,
+    baseP, lateP, earlyP,
+  };
+}
+
 function recalcTime() {
   const tbody = document.getElementById('time-rows-body');
   if (!tbody) return;
@@ -1252,13 +1264,56 @@ function recalcTime() {
   document.getElementById('total-all').textContent    = tAll.toFixed(1);
   calcAmount();
 }
+// 普通単価入力時：深夜・早朝単価が未入力なら25%増を自動セット
+function onBasePriceInput() {
+  const base = parseFloat(document.getElementById('f-unit-price')?.value) || 0;
+  const lateEl  = document.getElementById('f-unit-price-late');
+  const earlyEl = document.getElementById('f-unit-price-early');
+  if (lateEl  && !lateEl.dataset.manual)  lateEl.value  = base > 0 ? Math.round(base * 1.25) : '';
+  if (earlyEl && !earlyEl.dataset.manual) earlyEl.value = base > 0 ? Math.round(base * 1.25) : '';
+  calcAmount();
+}
+
 function calcAmount() {
-  const unitPrice = parseFloat(document.getElementById('f-unit-price')?.value) || 0;
-  const total = parseFloat(document.getElementById('total-all')?.textContent) || 0;
-  const amount = Math.round(unitPrice * total);
+  const baseP  = parseFloat(document.getElementById('f-unit-price')?.value) || 0;
+  const lateP  = parseFloat(document.getElementById('f-unit-price-late')?.value) || 0;
+  const earlyP = parseFloat(document.getElementById('f-unit-price-early')?.value) || 0;
+
+  const tNormal = parseFloat(document.getElementById('total-normal')?.textContent) || 0;
+  const tLate   = parseFloat(document.getElementById('total-late')?.textContent)   || 0;
+  const tEarly  = parseFloat(document.getElementById('total-early')?.textContent)  || 0;
+
+  const amountNormal = Math.round(baseP  * tNormal);
+  const amountLate   = Math.round(lateP  * tLate);
+  const amountEarly  = Math.round(earlyP * tEarly);
+  const amount = amountNormal + amountLate + amountEarly;
+
   const el = document.getElementById('f-amount');
   if (el) el.value = amount > 0 ? amount.toLocaleString('ja-JP') + '円' : '';
+
+  // 内訳表示
+  const breakdownEl = document.getElementById('amount-breakdown');
+  if (breakdownEl) {
+    const rows = [];
+    if (tNormal > 0) rows.push(`普通：${tNormal.toFixed(1)}h × ${baseP.toLocaleString('ja-JP')}円 = ${amountNormal.toLocaleString('ja-JP')}円`);
+    if (tLate   > 0) rows.push(`深夜：${tLate.toFixed(1)}h × ${lateP.toLocaleString('ja-JP')}円 = ${amountLate.toLocaleString('ja-JP')}円`);
+    if (tEarly  > 0) rows.push(`早朝：${tEarly.toFixed(1)}h × ${earlyP.toLocaleString('ja-JP')}円 = ${amountEarly.toLocaleString('ja-JP')}円`);
+    if (rows.length) {
+      breakdownEl.innerHTML = rows.join('<br>');
+      breakdownEl.style.display = '';
+    } else {
+      breakdownEl.style.display = 'none';
+    }
+  }
 }
+
+// 深夜・早朝単価が手動編集されたらフラグを立てて自動上書きを止める
+document.addEventListener('DOMContentLoaded', () => {
+  ['f-unit-price-late', 'f-unit-price-early'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('input', () => { el.dataset.manual = '1'; });
+  });
+});
 function getTimeRows() {
   const tbody = document.getElementById('time-rows-body');
   if (!tbody) return [];
@@ -1294,7 +1349,9 @@ function getFormData() {
     note:       document.getElementById('f-note').value.trim(),
     time_rows:  timeRows,
     checklist:  getChecklist(),
-    unit_price:   parseFloat(document.getElementById('f-unit-price').value) || 0,
+    unit_price:       parseFloat(document.getElementById('f-unit-price').value) || 0,
+    unit_price_late:  parseFloat(document.getElementById('f-unit-price-late').value) || 0,
+    unit_price_early: parseFloat(document.getElementById('f-unit-price-early').value) || 0,
     client_id:    (() => { const s = document.getElementById('f-client-select'); return s?.value || null; })(),
     client_name:  (() => { const s = document.getElementById('f-client-select'); return s?.options[s.selectedIndex]?.text || ''; })(),
     client_email: (() => { const s = document.getElementById('f-client-select'); return s?.options[s.selectedIndex]?.dataset?.email || ''; })(),
@@ -1326,6 +1383,8 @@ async function sendToSignQueue() {
       time_rows:  d.time_rows,
       checklist:  d.checklist,
       unit_price: d.unit_price,
+      unit_price_late:  d.unit_price_late,
+      unit_price_early: d.unit_price_early,
       slip_no:    d.slip_no,
       client_id:  d.client_id  || null,
       client_name: d.client_name || '',
@@ -1344,10 +1403,15 @@ async function sendToSignQueue() {
 
 function resetForm() {
   ['f-project','f-note'].forEach(id => { const el = document.getElementById(id); if(el) el.value = ''; });
-  // 伝票番号はリセット後に再生成（readOnly状態に戻す）
-  const slipEl = document.getElementById('f-slip-no'); if(slipEl){ slipEl.readOnly = true; slipEl.style.background = 'var(--surface2)'; slipEl.value = ''; }
+  const slipEl = document.getElementById('f-slip-no'); if(slipEl) slipEl.value = '';
   document.getElementById('f-unit-price').value = '';
+  const lateEl  = document.getElementById('f-unit-price-late');
+  const earlyEl = document.getElementById('f-unit-price-early');
+  if (lateEl)  { lateEl.value  = ''; delete lateEl.dataset.manual; }
+  if (earlyEl) { earlyEl.value = ''; delete earlyEl.dataset.manual; }
   document.getElementById('f-amount').value = '';
+  const breakdownEl = document.getElementById('amount-breakdown');
+  if (breakdownEl) breakdownEl.style.display = 'none';
   [0,1,2,3,4,5,6,7].forEach(i => { const el = document.getElementById(`chk-${i}`); if(el) el.checked = false; });
   document.getElementById('time-rows-body').innerHTML = '';
   timeRowCount = 0;
@@ -1375,9 +1439,9 @@ async function setDefaults() {
   await refreshStaffSelect();
   await loadSiteSuggestions();
   await refreshClientSelect();
-  // 伝票番号を自動生成（手動編集中でなければ）
+  // 伝票番号を自動生成
   const slipEl = document.getElementById('f-slip-no');
-  if (slipEl && slipEl.readOnly) {
+  if (slipEl) {
     slipEl.value = await generateSlipNo(today);
   }
 }
@@ -1440,7 +1504,8 @@ async function openSignFlow(id) {
     const tLate   = timeRows.reduce((s,x) => s+(x.late||0), 0);
     const tEarly  = timeRows.reduce((s,x) => s+(x.early||0), 0);
     const tAll    = tNormal + tLate + tEarly || item.hours || 0;
-    const amount  = item.unit_price ? Math.round(item.unit_price * tAll) : 0;
+    const amtCalc = calcAmountFromRecord(item, tNormal, tLate, tEarly);
+    const amount  = amtCalc.total;
     const checks  = item.checklist || [];
 
     // 基本情報
@@ -1506,8 +1571,12 @@ async function openSignFlow(id) {
     // 金額
     let amountHTML = '';
     if (item.unit_price) {
+      const breakdownParts = [];
+      if (tNormal > 0) breakdownParts.push('普通 ' + tNormal.toFixed(1) + 'h×' + amtCalc.baseP.toLocaleString('ja-JP') + '円');
+      if (tLate   > 0) breakdownParts.push('深夜 ' + tLate.toFixed(1) + 'h×' + amtCalc.lateP.toLocaleString('ja-JP') + '円');
+      if (tEarly  > 0) breakdownParts.push('早朝 ' + tEarly.toFixed(1) + 'h×' + amtCalc.earlyP.toLocaleString('ja-JP') + '円');
       amountHTML = '<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 16px;background:var(--accent);border-radius:var(--radius);margin-top:4px;">'
-        + '<span style="font-size:13px;font-weight:500;color:var(--bg);">合計金額（単価 ' + item.unit_price.toLocaleString('ja-JP') + '円 × ' + tAll.toFixed(1) + 'h）</span>'
+        + '<span style="font-size:13px;font-weight:500;color:var(--bg);">合計金額（' + breakdownParts.join(' / ') + '）</span>'
         + '<span style="font-size:18px;font-weight:700;color:var(--bg);">' + amount.toLocaleString('ja-JP') + '円</span>'
         + '</div>';
     }
@@ -1634,6 +1703,8 @@ async function completeSign() {
       time_rows:  item.time_rows   || [],
       checklist:  item.checklist   || [],
       unit_price: item.unit_price  || 0,
+      unit_price_late:  item.unit_price_late  || 0,
+      unit_price_early: item.unit_price_early || 0,
       slip_no:    item.slip_no     || '',
       client_id:  item.client_id   || null,
       client_name: item.client_name  || '',
@@ -1806,7 +1877,8 @@ async function generatePDF(r, download) {
   const tLate   = rows.reduce((s,x)=>s+(x.late||0),0);
   const tEarly  = rows.reduce((s,x)=>s+(x.early||0),0);
   const tAll    = tNormal+tLate+tEarly || r.hours || 0;
-  const amount  = r.unit_price ? Math.round(r.unit_price * tAll) : 0;
+  const amtCalc = calcAmountFromRecord(r, tNormal, tLate, tEarly);
+  const amount  = amtCalc.total;
 
   // チェックリスト
   const checks = r.checklist || [];
@@ -1915,11 +1987,12 @@ async function generatePDF(r, download) {
       </div>` : '<div style="flex:1;"></div>'}
 
       ${r.unit_price ? `
-      <div style="min-width:180px;border:1px solid #e8e7e3;border-radius:4px;overflow:hidden;">
+      <div style="min-width:200px;border:1px solid #e8e7e3;border-radius:4px;overflow:hidden;">
         <div style="background:#f2f1ee;padding:5px 10px;font-size:10px;font-weight:600;color:#6b6963;">金額明細</div>
         <table style="width:100%;border-collapse:collapse;">
-          <tr><td style="padding:5px 10px;font-size:10px;color:#6b6963;">単価</td><td style="padding:5px 10px;font-size:11px;text-align:right;">${(r.unit_price||0).toLocaleString('ja-JP')}円/h</td></tr>
-          <tr><td style="padding:5px 10px;font-size:10px;color:#6b6963;">実働時間</td><td style="padding:5px 10px;font-size:11px;text-align:right;">${tAll.toFixed(1)}h</td></tr>
+          ${tNormal>0?`<tr><td style="padding:4px 10px;font-size:10px;color:#6b6963;">普通 ${tNormal.toFixed(1)}h × ${amtCalc.baseP.toLocaleString('ja-JP')}円</td><td style="padding:4px 10px;font-size:11px;text-align:right;">${amtCalc.amountNormal.toLocaleString('ja-JP')}円</td></tr>`:''}
+          ${tLate>0?`<tr><td style="padding:4px 10px;font-size:10px;color:#6b6963;">深夜 ${tLate.toFixed(1)}h × ${amtCalc.lateP.toLocaleString('ja-JP')}円</td><td style="padding:4px 10px;font-size:11px;text-align:right;">${amtCalc.amountLate.toLocaleString('ja-JP')}円</td></tr>`:''}
+          ${tEarly>0?`<tr><td style="padding:4px 10px;font-size:10px;color:#6b6963;">早朝 ${tEarly.toFixed(1)}h × ${amtCalc.earlyP.toLocaleString('ja-JP')}円</td><td style="padding:4px 10px;font-size:11px;text-align:right;">${amtCalc.amountEarly.toLocaleString('ja-JP')}円</td></tr>`:''}
           <tr style="background:#1a1917;color:#fff;">
             <td style="padding:7px 10px;font-size:11px;font-weight:bold;">合計金額</td>
             <td style="padding:7px 10px;font-size:15px;font-weight:bold;text-align:right;">${amount.toLocaleString('ja-JP')}円</td>
@@ -2404,22 +2477,32 @@ const CSV_FORMATS = {
   },
   generic: {
     label: '汎用CSV',
-    headers: ['案件名','現場名','担当者','日付','開始','終了','休憩(h)','普通(h)','深夜(h)','早朝(h)','実働(h)','伝票No','備考'],
-    row: (r, tr) => [
-      r.project,
-      r.site,
-      tr.name || r.staff,
-      tr.date || r.date,
-      tr.start,
-      tr.end,
-      tr.break_h || 0,
-      tr.normal  || 0,
-      tr.late    || 0,
-      tr.early   || 0,
-      ((tr.normal||0)+(tr.late||0)+(tr.early||0)).toFixed(1),
-      r.slip_no || '',
-      r.note    || ''
-    ]
+    headers: ['案件名','現場名','担当者','日付','開始','終了','休憩(h)','普通(h)','深夜(h)','早朝(h)','実働(h)','普通単価','深夜単価','早朝単価','金額','伝票No','備考'],
+    row: (r, tr) => {
+      const baseP  = r.unit_price       || 0;
+      const lateP  = r.unit_price_late  || baseP;
+      const earlyP = r.unit_price_early || baseP;
+      const amt = Math.round((tr.normal||0)*baseP) + Math.round((tr.late||0)*lateP) + Math.round((tr.early||0)*earlyP);
+      return [
+        r.project,
+        r.site,
+        tr.name || r.staff,
+        tr.date || r.date,
+        tr.start,
+        tr.end,
+        tr.break_h || 0,
+        tr.normal  || 0,
+        tr.late    || 0,
+        tr.early   || 0,
+        ((tr.normal||0)+(tr.late||0)+(tr.early||0)).toFixed(1),
+        baseP,
+        lateP,
+        earlyP,
+        amt,
+        r.slip_no || '',
+        r.note    || ''
+      ];
+    }
   }
 };
 
