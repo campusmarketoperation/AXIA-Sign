@@ -208,7 +208,6 @@
   </div>
 
   <div class="content">
-    <div id="announcement-container"></div>
     <div class="screen active" id="screen-home">
       <div class="page-title" id="home-greeting">おはようございます</div>
       <div class="stats">
@@ -312,7 +311,40 @@
 
       <div class="card">
         <div class="card-title">作業内容チェック</div>
-        <div id="checklist-container" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;"></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+          <label style="display:flex;align-items:center;gap:8px;padding:8px;background:var(--surface2);border-radius:var(--radius);cursor:pointer;font-size:13px;">
+            <input type="checkbox" id="chk-0" style="width:16px;height:16px;accent-color:var(--accent);cursor:pointer;" onchange="calcAmount()">
+            <span>1．設備の巡回・点検</span>
+          </label>
+          <label style="display:flex;align-items:center;gap:8px;padding:8px;background:var(--surface2);border-radius:var(--radius);cursor:pointer;font-size:13px;">
+            <input type="checkbox" id="chk-1" style="width:16px;height:16px;accent-color:var(--accent);cursor:pointer;" onchange="calcAmount()">
+            <span>2．清掃作業</span>
+          </label>
+          <label style="display:flex;align-items:center;gap:8px;padding:8px;background:var(--surface2);border-radius:var(--radius);cursor:pointer;font-size:13px;">
+            <input type="checkbox" id="chk-2" style="width:16px;height:16px;accent-color:var(--accent);cursor:pointer;" onchange="calcAmount()">
+            <span>3．一般廃棄物の処理</span>
+          </label>
+          <label style="display:flex;align-items:center;gap:8px;padding:8px;background:var(--surface2);border-radius:var(--radius);cursor:pointer;font-size:13px;">
+            <input type="checkbox" id="chk-3" style="width:16px;height:16px;accent-color:var(--accent);cursor:pointer;" onchange="calcAmount()">
+            <span>4．非業自らの発生ゴミ処理</span>
+          </label>
+          <label style="display:flex;align-items:center;gap:8px;padding:8px;background:var(--surface2);border-radius:var(--radius);cursor:pointer;font-size:13px;">
+            <input type="checkbox" id="chk-4" style="width:16px;height:16px;accent-color:var(--accent);cursor:pointer;" onchange="calcAmount()">
+            <span>5．工事関係車両・音響の管理</span>
+          </label>
+          <label style="display:flex;align-items:center;gap:8px;padding:8px;background:var(--surface2);border-radius:var(--radius);cursor:pointer;font-size:13px;">
+            <input type="checkbox" id="chk-5" style="width:16px;height:16px;accent-color:var(--accent);cursor:pointer;" onchange="calcAmount()">
+            <span>6．廃材回収・運搬作業</span>
+          </label>
+          <label style="display:flex;align-items:center;gap:8px;padding:8px;background:var(--surface2);border-radius:var(--radius);cursor:pointer;font-size:13px;">
+            <input type="checkbox" id="chk-6" style="width:16px;height:16px;accent-color:var(--accent);cursor:pointer;" onchange="calcAmount()">
+            <span>7．交互通行</span>
+          </label>
+          <label style="display:flex;align-items:center;gap:8px;padding:8px;background:var(--surface2);border-radius:var(--radius);cursor:pointer;font-size:13px;">
+            <input type="checkbox" id="chk-7" style="width:16px;height:16px;accent-color:var(--accent);cursor:pointer;" onchange="calcAmount()">
+            <span>8．その他</span>
+          </label>
+        </div>
         <div class="field" style="margin-top:12px;margin-bottom:0">
           <label>備考・その他詳細</label>
           <textarea id="f-note" rows="2" placeholder="特記事項があれば..."></textarea>
@@ -449,7 +481,7 @@
         </div>
       </div>
 
-      <div class="card feature-email">
+      <div class="card">
         <div class="card-title">メール連携（Resend API）</div>
         <div class="setting-row" style="align-items:flex-start;padding:14px 0;">
           <div style="flex:1;">
@@ -468,7 +500,7 @@
         <button class="btn btn-ghost btn-sm" onclick="saveEmailSettings()" style="margin-top:4px;">メール設定を保存</button>
       </div>
 
-      <div class="card feature-client">
+      <div class="card">
         <div class="card-title">元請け企業マスター</div>
         <p style="font-size:13px;color:var(--text2);margin-bottom:14px;line-height:1.6;">ここで登録した企業は、伝票送信時のプルダウンに表示されます。現場の隊員はアドレスを入力不要になります。</p>
         <div style="display:flex;gap:8px;margin-bottom:10px;">
@@ -491,7 +523,7 @@
           </div>
           <button class="btn btn-ghost btn-sm" onclick="exportData()">書き出し</button>
         </div>
-        <div class="setting-row feature-csv" style="align-items:flex-start;padding:14px 0;">
+        <div class="setting-row" style="align-items:flex-start;padding:14px 0;">
           <div style="flex:1;">
             <div class="setting-label">給与ソフト用CSVエクスポート</div>
             <div class="setting-sub">フォーマットを選んでワンクリック出力</div>
@@ -786,9 +818,9 @@ function idToEmail(loginId) {
   return loginId.toLowerCase().replace(/[^a-z0-9_\-]/g, '') + '@axia-sign.internal';
 }
 
-async function doLogin(overrideId, overridePass) {
-  const rawId = overrideId || (document.getElementById('login-id') || document.getElementById('login-email'))?.value.trim();
-  const pass  = overridePass !== undefined ? overridePass : document.getElementById('login-password').value;
+async function doLogin() {
+  const rawId = (document.getElementById('login-id') || document.getElementById('login-email'))?.value.trim();
+  const pass = document.getElementById('login-password').value;
   if (!rawId || !pass) { showToast('ログインIDとパスワードを入力してください'); return; }
   const email = rawId.includes('@') ? rawId : idToEmail(rawId);
   showLoading('ログイン中...');
@@ -811,8 +843,7 @@ async function doLogin(overrideId, overridePass) {
     localStorage.setItem('axia_user', JSON.stringify(currentUser));
     hideLoading();
     enterApp();
-    return true;
-  } catch(e) { hideLoading(); showToast('エラー：' + e.message); return false; }
+  } catch(e) { hideLoading(); showToast('エラー：' + e.message); }
 }
 
 async function doLogout() {
@@ -847,8 +878,6 @@ async function enterApp() {
   if (nameEl) nameEl.textContent = currentUser.company || '（未設定）';
   if (idEl)   idEl.textContent   = currentUser.company_id || '—';
   _logoCache = undefined; // ログインのたびにロゴを再取得
-  await loadCompanySettings();
-  applyCompanySettings();
   initFullSignPad();
   setDefaults();
   loadSettings();
@@ -856,140 +885,12 @@ async function enterApp() {
   await updateHome();
   hideLoading();
   setGreeting();
-  loadAnnouncements();
-}
-
-// ════════════ COMPANY SETTINGS（会社別カスタマイズ）════════════
-let companySettings = null; // { plan, templates, home_layout, feature_flags }
-
-const DEFAULT_FEATURE_FLAGS = {
-  csv_export: true,
-  email_send: true,
-  client_master: true,
-};
-const DEFAULT_HOME_LAYOUT = {
-  show_stats: true,
-  show_recent: true,
-};
-
-async function loadCompanySettings() {
-  try {
-    const rows = await sbFetch('company_settings', 'GET', null, `?company_id=eq.${currentUser.company_id}`);
-    companySettings = rows && rows[0] ? rows[0] : null;
-  } catch {
-    companySettings = null;
-  }
-}
-
-function getFeatureFlags() {
-  return { ...DEFAULT_FEATURE_FLAGS, ...(companySettings?.feature_flags || {}) };
-}
-function getHomeLayout() {
-  return { ...DEFAULT_HOME_LAYOUT, ...(companySettings?.home_layout || {}) };
-}
-
-// プランごとの月間伝票発行上限
-const PLAN_LIMITS = { light: 50, standard: 300, premium: 9999 };
-
-function getCurrentPlan() {
-  return companySettings?.plan || 'standard';
-}
-
-// 今月の伝票発行数を取得し、上限に達しているか確認する
-async function checkUsageLimit() {
-  const plan  = getCurrentPlan();
-  const limit = PLAN_LIMITS[plan] ?? 9999;
-  if (limit >= 9999) return { ok: true, count: 0, limit };
-
-  try {
-    const now = new Date();
-    const from = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-01`;
-    const rows = await sbFetch('records', 'GET', null,
-      `?company_id=eq.${currentUser.company_id}&date=gte.${from}&select=id`);
-    const count = (rows || []).length;
-    return { ok: count < limit, count, limit };
-  } catch {
-    return { ok: true, count: 0, limit }; // 確認できない場合はブロックしない
-  }
-}
-
-// 会社設定をUIに反映する
-function applyCompanySettings() {
-  // ① テンプレート定義の上書き
-  if (companySettings?.templates && Object.keys(companySettings.templates).length) {
-    TEMPLATES = companySettings.templates;
-  }
-
-  // ② チェックリスト項目の上書き（最初のテンプレートのchecklist_labelsを使う、なければデフォルト維持）
-  const customChecklist = companySettings?.templates?._checklist_labels;
-  if (Array.isArray(customChecklist) && customChecklist.length) {
-    CHECKLIST_LABELS = customChecklist;
-  }
-  renderChecklist();
-
-  // ③ ホーム画面レイアウト
-  const layout = getHomeLayout();
-  const statsEl  = document.querySelector('#screen-home .stats');
-  const recentHeader = document.querySelector('#screen-home .section-header');
-  const recentBody   = document.getElementById('home-recent');
-  if (statsEl) statsEl.style.display = layout.show_stats ? '' : 'none';
-  if (recentHeader) recentHeader.style.display = layout.show_recent ? '' : 'none';
-  if (recentBody)   recentBody.style.display   = layout.show_recent ? '' : 'none';
-
-  // ④ 機能フラグ（CSV・メール送信・元請けマスター）
-  const flags = getFeatureFlags();
-  document.querySelectorAll('.feature-csv').forEach(el => el.style.display = flags.csv_export ? '' : 'none');
-  document.querySelectorAll('.feature-email').forEach(el => el.style.display = flags.email_send ? '' : 'none');
-  document.querySelectorAll('.feature-client').forEach(el => el.style.display = flags.client_master ? '' : 'none');
 }
 
 function setGreeting() {
   const h = new Date().getHours();
   const g = h < 12 ? 'おはようございます' : h < 18 ? 'こんにちは' : 'お疲れ様です';
   document.getElementById('home-greeting').textContent = g + '、' + (currentUser.company || currentUser.name || '') + 'さん';
-}
-
-// ════════════ お知らせバナー ════════════
-async function loadAnnouncements() {
-  try {
-    const today = new Date().toISOString().split('T')[0];
-    const rows = await sbFetch('announcements', 'GET', null,
-      `?or=(expires_at.is.null,expires_at.gte.${today})&order=created_at.desc&limit=5`);
-    const dismissed = JSON.parse(localStorage.getItem('axia_dismissed_announcements') || '[]');
-    const visible = (rows || []).filter(a => !dismissed.includes(a.id));
-
-    const container = document.getElementById('announcement-container');
-    if (!container) return;
-    if (!visible.length) { container.innerHTML = ''; return; }
-
-    const ICONS = { info: '📢', warning: '⚠️', maintenance: '🔧' };
-    const COLORS = {
-      info:        { bg: 'var(--blue-bg)',  text: 'var(--blue-text)' },
-      warning:     { bg: 'var(--amber-bg)', text: 'var(--amber-text)' },
-      maintenance: { bg: 'var(--surface2)', text: 'var(--text2)' },
-    };
-
-    container.innerHTML = visible.map(a => {
-      const c = COLORS[a.type] || COLORS.info;
-      return `
-      <div style="background:${c.bg};border-radius:var(--radius);padding:12px 14px;margin-bottom:10px;display:flex;gap:10px;align-items:flex-start;">
-        <div style="flex:1;">
-          <div style="font-size:13px;font-weight:600;color:${c.text};">${ICONS[a.type]||'📢'} ${a.title}</div>
-          <div style="font-size:12px;color:${c.text};margin-top:3px;line-height:1.6;opacity:0.9;">${a.body}</div>
-        </div>
-        <button onclick="dismissAnnouncement(${a.id})" style="background:none;border:none;cursor:pointer;color:${c.text};opacity:0.6;flex-shrink:0;padding:2px;">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-        </button>
-      </div>`;
-    }).join('');
-  } catch { /* announcementsテーブル未作成時はサイレント */ }
-}
-
-function dismissAnnouncement(id) {
-  const dismissed = JSON.parse(localStorage.getItem('axia_dismissed_announcements') || '[]');
-  if (!dismissed.includes(id)) dismissed.push(id);
-  localStorage.setItem('axia_dismissed_announcements', JSON.stringify(dismissed));
-  loadAnnouncements();
 }
 
 // ════════════ STAFF MANAGEMENT ════════════
@@ -1029,45 +930,17 @@ function getSelectedStaff() {
 }
 
 // ════════════ TEMPLATE SELECTOR（職種テンプレート）════════════
-let TEMPLATES = {
+const TEMPLATES = {
   traffic:  { label: '交通誘導', emoji: '🚦', checkLabels: ['工事関係車両・音響の管理', '交互通行', 'その他'] },
   facility: { label: '施設警備', emoji: '🏢', checkLabels: ['設備の巡回・点検', '一般廃棄物の処理', 'その他'] },
   event:    { label: 'イベント', emoji: '🎪', checkLabels: ['工事関係車両・音響の管理', 'その他'] },
 };
 
-async function onNewSlipClick() {
-  // 利用上限チェック
-  showLoading('確認中...');
-  const usage = await checkUsageLimit();
-  hideLoading();
-  if (!usage.ok) {
-    showUsageLimitModal(usage);
-    return;
-  }
+function onNewSlipClick() {
   // 新規作成時に毎回テンプレートを選ばせる
   _currentTemplate = null;
   updateTemplateBadge();
   showTemplateSelector();
-}
-
-function showUsageLimitModal(usage) {
-  const planLabel = { light: 'ライト', standard: 'スタンダード', premium: 'プレミアム' }[getCurrentPlan()] || getCurrentPlan();
-  const overlay = document.createElement('div');
-  overlay.style.cssText = 'position:fixed;inset:0;z-index:700;background:rgba(0,0,0,0.4);display:flex;align-items:center;justify-content:center;padding:1.5rem;';
-  overlay.innerHTML = `
-    <div style="background:var(--bg);border-radius:16px;padding:28px;max-width:380px;width:100%;text-align:center;">
-      <div style="font-size:36px;margin-bottom:8px;">📋</div>
-      <div style="font-size:17px;font-weight:700;margin-bottom:8px;">今月の発行上限に達しました</div>
-      <div style="font-size:13px;color:var(--text2);line-height:1.7;margin-bottom:20px;">
-        現在のプラン「${planLabel}」では月間 ${usage.limit} 件まで伝票を作成できます。<br>
-        今月は既に ${usage.count} 件作成済みです。<br><br>
-        プランのアップグレードについては運営にお問い合わせください。
-      </div>
-      <button class="btn btn-primary" style="width:100%;" id="usage-limit-close">閉じる</button>
-    </div>`;
-  document.body.appendChild(overlay);
-  overlay.querySelector('#usage-limit-close').onclick = () => overlay.remove();
-  overlay.onclick = (e) => { if (e.target === overlay) overlay.remove(); };
 }
 
 function showTemplateSelector() {
@@ -1092,7 +965,7 @@ function selectTemplate(tpl) {
     });
   } else {
     // テンプレートなし → 全チェックを外す
-    CHECKLIST_LABELS.forEach((_, i) => {
+    [0,1,2,3,4,5,6,7].forEach(i => {
       const el = document.getElementById('chk-' + i);
       if (el) el.checked = false;
     });
@@ -1459,20 +1332,9 @@ function getTimeRows() {
   });
 }
 function getChecklist() {
-  return CHECKLIST_LABELS.map((_, i) => document.getElementById(`chk-${i}`)?.checked || false);
+  return [0,1,2,3,4,5,6,7].map(i => document.getElementById(`chk-${i}`)?.checked || false);
 }
-let CHECKLIST_LABELS = ['設備の巡回・点検','清掃作業','一般廃棄物の処理','非業自らの発生ゴミ処理','工事関係車両・音響の管理','廃材回収・運搬作業','交互通行','その他'];
-
-// チェックリストUIを動的に生成
-function renderChecklist() {
-  const container = document.getElementById('checklist-container');
-  if (!container) return;
-  container.innerHTML = CHECKLIST_LABELS.map((label, i) => `
-    <label style="display:flex;align-items:center;gap:8px;padding:8px;background:var(--surface2);border-radius:var(--radius);cursor:pointer;font-size:13px;">
-      <input type="checkbox" id="chk-${i}" style="width:16px;height:16px;accent-color:var(--accent);cursor:pointer;" onchange="calcAmount()">
-      <span>${i+1}．${label}</span>
-    </label>`).join('');
-}
+const CHECKLIST_LABELS = ['設備の巡回・点検','清掃作業','一般廃棄物の処理','非業自らの発生ゴミ処理','工事関係車両・音響の管理','廃材回収・運搬作業','交互通行','その他'];
 
 function getFormData() {
   const timeRows = getTimeRows();
@@ -1550,7 +1412,7 @@ function resetForm() {
   document.getElementById('f-amount').value = '';
   const breakdownEl = document.getElementById('amount-breakdown');
   if (breakdownEl) breakdownEl.style.display = 'none';
-  CHECKLIST_LABELS.forEach((_, i) => { const el = document.getElementById(`chk-${i}`); if(el) el.checked = false; });
+  [0,1,2,3,4,5,6,7].forEach(i => { const el = document.getElementById(`chk-${i}`); if(el) el.checked = false; });
   document.getElementById('time-rows-body').innerHTML = '';
   timeRowCount = 0;
   setDefaults();
@@ -2279,7 +2141,7 @@ function recordHTML(r) {
       </div>
       <div class="record-btns">
         <button class="icon-btn" onclick="downloadRecord(${r.id})" title="PDF"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></button>
-        ${getFeatureFlags().email_send ? `<button class="icon-btn" onclick="openEmailModal(${r.id})" title="メール"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg></button>` : ''}
+        <button class="icon-btn" onclick="openEmailModal(${r.id})" title="メール"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg></button>
         <button class="icon-btn" onclick="deleteRecord(${r.id})" title="削除"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg></button>
       </div>
     </div>`;
@@ -2332,7 +2194,7 @@ async function openDetail(id) {
       ${r.sig_data ? `<div style="border:0.5px solid var(--border);border-radius:var(--radius);padding:8px;margin-bottom:1rem"><img src="${r.sig_data}" style="width:100%;height:80px;object-fit:contain"></div>` : ''}`;
     document.getElementById('detail-actions').innerHTML = `
       <button class="btn btn-ghost" style="flex:1" onclick="closeModal('detail-modal')">閉じる</button>
-      ${getFeatureFlags().email_send ? `<button class="btn btn-ghost" style="flex:1" onclick="openEmailModal(${id});closeModal('detail-modal')">メール</button>` : ''}
+      <button class="btn btn-ghost" style="flex:1" onclick="openEmailModal(${id});closeModal('detail-modal')">メール</button>
       <button class="btn btn-primary" style="flex:1" onclick="downloadRecord(${id});closeModal('detail-modal')">PDF</button>`;
     document.getElementById('detail-modal').classList.add('open');
   } catch(e) { showToast('エラー：' + e.message); }
@@ -2726,33 +2588,6 @@ function showToast(msg) {
 }
 
 // ════════════ BOOT ════════════
-// 代理ログイン（運営管理画面から開いた場合）
-const _impParams = new URLSearchParams(window.location.search);
-const _impId = _impParams.get('imp_id');
-const _impPw = _impParams.get('imp_pw');
-if (_impId && _impPw) {
-  // 既存セッションを破棄して代理ログインを実行
-  localStorage.removeItem('axia_user');
-  sessionStorage.removeItem('axia_rt');
-  currentUser = null;
-  showLoading('代理ログイン中...');
-  doLogin(_impId, _impPw).then((success) => {
-    // URLからパラメータを消す（リロード時に再ログインされないように）
-    window.history.replaceState({}, '', window.location.pathname);
-    if (!success) {
-      // 失敗時はログイン画面を表示
-      document.getElementById('auth-screen').style.display = 'flex';
-      document.getElementById('app').style.display = 'none';
-    }
-  }).catch((e) => {
-    hideLoading();
-    window.history.replaceState({}, '', window.location.pathname);
-    showToast('代理ログインエラー：' + e.message);
-    document.getElementById('auth-screen').style.display = 'flex';
-    document.getElementById('app').style.display = 'none';
-  });
-} else {
-
 // ページリロード時にセッションを復元
 // accessToken はメモリのみ（XSS 対策）、refresh token は sessionStorage に保持
 const savedUser = localStorage.getItem('axia_user');
@@ -2781,9 +2616,6 @@ if (savedUser) {
     }
   } catch {}
 }
-
-} // _impId/_impPw のelse終わり
-
 </script>
 </body>
 </html>
