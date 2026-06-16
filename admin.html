@@ -1330,16 +1330,15 @@ function viewRecordSig(companyId, recordId) {
     </body></html>`);
 }
 
-
+// 🟢【修復】欠落していた関数宣言を完全に配置
+function clearRecordFilter() {
   document.getElementById('rec-search').value = '';
   document.getElementById('rec-date-from').value = '';
   document.getElementById('rec-date-to').value = '';
   renderAllRecords();
 }
 
-// ════════════════════════════════════════
-// ロゴ管理
-// ════════════════════════════════════════
+// ════════════ Logo管理 ════════════
 async function loadLogos() {
   showLoading('会社一覧を読み込み中...');
   try {
@@ -1516,7 +1515,7 @@ async function loadUsage() {
 }
 
 // ════════════════════════════════════════
-// お知らせ管理（localStorageベース）
+// お知らせ管理
 // ════════════════════════════════════════
 async function loadAnnounce() {
   showLoading('お知らせを読み込み中...');
@@ -1606,7 +1605,7 @@ function renderMailLog() {
       (m.slip_no||'').toLowerCase().includes(query) ||
       (m.company_id||'').toLowerCase().includes(query) ||
       (m.to_email||'').toLowerCase().includes(query) ||
-      (names[m.company_id]||'').toLowerCase().includes(query);
+      names[m.company_id].toLowerCase().includes(query);
     const matchStatus = !status || m.status === status;
     return matchText && matchStatus;
   });
@@ -1728,7 +1727,6 @@ async function startImpersonate(companyId, companyName, loginId) {
     localStorage.setItem('axia_impersonate_log', JSON.stringify(log.slice(0, 50)));
   } catch(e) { hideLoading(); showToast('エラー: ' + e.message); }
 }
-
 </script>
 </body>
 </html>
