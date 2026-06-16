@@ -810,8 +810,7 @@ async function doLogout() {
 async function enterApp() {
   document.getElementById('auth-screen').style.display = 'none';
   document.getElementById('app').style.display = 'flex';
-  document.getElementById('user-label').textContent = currentUser.name;
-  const nameEl = document.getElementById('s-company-name');
+  document.getElementById('user-label').textContent = currentUser.company || currentUser.name;  const nameEl = document.getElementById('s-company-name');
   const idEl   = document.getElementById('s-company-id');
   if (nameEl) nameEl.textContent = currentUser.company || '（未設定）';
   if (idEl)   idEl.textContent   = currentUser.company_id || '—';

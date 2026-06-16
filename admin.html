@@ -583,11 +583,7 @@ async function doAdminLogin() {
 
   showLoading('認証中...');
   try {
-    const res = await fetch(`${SB_URL}/auth/v1/token?grant_type=password`, {
-      method: 'POST',
-      headers: { 'apikey': SB_ANON_KEY, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password: pass })
-    });
+    const url = `index.html?mode=impersonate&admin_token=${encodeURIComponent(adminToken)}&company_id=${encodeURIComponent(companyId)}&company_name=${encodeURIComponent(companyName)}&login_id=${encodeURIComponent(loginId)}`;
     const data = await res.json();
     if (!res.ok) throw new Error(data.error_description || 'ログイン失敗');
 
