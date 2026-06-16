@@ -198,6 +198,10 @@
     <div class="topbar-logo">AXIA Sign</div>
     <div class="topbar-right">
       <span id="template-badge" style="display:none;align-items:center;font-size:11px;font-weight:600;background:var(--surface2);border:0.5px solid var(--border2);border-radius:20px;padding:4px 10px;cursor:pointer;gap:4px;" onclick="showTemplateSelector()"></span>
+      <button onclick="openAnnouncementModal()" style="background:none;border:none;cursor:pointer;color:var(--text);padding:6px;position:relative;display:flex;align-items:center;justify-content:center;" title="お知らせ一覧">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="21" height="21"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
+        <span id="announcement-dot" style="display:none;position:absolute;top:4px;right:4px;width:8px;height:8px;background:#E24B4A;border-radius:50%;"></span>
+      </button>
       <span class="user-badge" id="user-label"></span>
       <button class="btn btn-ghost btn-sm" onclick="doLogout()">ログアウト</button>
     </div>
@@ -576,6 +580,16 @@
   </div>
 </div>
 
+<div class="modal-backdrop" id="announcement-modal">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">🔔 お知らせ履歴</div>
+    <div id="announcement-modal-list" style="display:flex;flex-direction:column;gap:10px;margin-bottom:12px;"></div>
+    <div class="modal-actions">
+      <button class="btn btn-primary" style="width:100%" onclick="closeModal('announcement-modal')">閉じる</button>
+    </div>
+  </div>
+</div>
 <div class="toast" id="toast"></div>
 
 <div id="template-overlay" style="display:none;position:fixed;inset:0;z-index:600;background:var(--bg);flex-direction:column;align-items:center;justify-content:center;padding:2rem 1.5rem;">
@@ -672,6 +686,7 @@ const SB_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS
 let _accessToken  = null;
 let _refreshToken = null;
 let _tokenExpiry  = 0;
+let _cachedAnnouncements = [];
 
 function setTokens(access, refresh, expiresIn) {
   _accessToken  = access;
@@ -909,39 +924,67 @@ function setGreeting() {
   document.getElementById('home-greeting').textContent = g + '、' + (currentUser.company || currentUser.name || '') + 'さん';
 }
 
+/* ── 📢 お知らせコアロジック（通知ドット＆履歴対応） ── */
 async function loadAnnouncements() {
   try {
     const today = new Date().toISOString().split('T')[0];
-    const rows = await sbFetch('announcements', 'GET', null,
-      `?or=(expires_at.is.null,expires_at.gte.${today})&order=created_at.desc&limit=5`);
+    const rows = await sbFetch('announcements', 'GET', null, `?or=(expires_at.is.null,expires_at.gte.${today})&order=created_at.desc&limit=10`);
+    _cachedAnnouncements = rows || [];
     const dismissed = JSON.parse(localStorage.getItem('axia_dismissed_announcements') || '[]');
-    const visible = (rows || []).filter(a => !dismissed.includes(a.id));
+    const visible = _cachedAnnouncements.filter(a => !dismissed.includes(a.id));
+
+    // 未読通知ドットの制御
+    const dot = document.getElementById('announcement-dot');
+    if (dot) dot.style.display = visible.length > 0 ? 'block' : 'none';
 
     const container = document.getElementById('announcement-container');
     if (!container) return;
     if (!visible.length) { container.innerHTML = ''; return; }
 
     const ICONS = { info: '📢', warning: '⚠️', maintenance: '🔧' };
-    const COLORS = {
-      info:        { bg: 'var(--blue-bg)',  text: 'var(--blue-text)' },
-      warning:     { bg: 'var(--amber-bg)', text: 'var(--amber-text)' },
-      maintenance: { bg: 'var(--surface2)', text: 'var(--text2)' },
-    };
+    const COLORS = { info: { bg: 'var(--blue-bg)', text: 'var(--blue-text)' }, warning: { bg: 'var(--amber-bg)', text: 'var(--amber-text)' }, maintenance: { bg: 'var(--surface2)', text: 'var(--text2)' } };
 
     container.innerHTML = visible.map(a => {
       const c = COLORS[a.type] || COLORS.info;
-      return `
-      <div style="background:${c.bg};border-radius:var(--radius);padding:12px 14px;margin-bottom:10px;display:flex;gap:10px;align-items:flex-start;">
+      return `<div style="background:${c.bg};border-radius:var(--radius);padding:12px 14px;margin-bottom:10px;display:flex;gap:10px;align-items:flex-start;">
         <div style="flex:1;">
           <div style="font-size:13px;font-weight:600;color:${c.text};">${ICONS[a.type]||'📢'} ${a.title}</div>
           <div style="font-size:12px;color:${c.text};margin-top:3px;line-height:1.6;opacity:0.9;">${a.body}</div>
         </div>
-        <button onclick="dismissAnnouncement(${a.id})" style="background:none;border:none;cursor:pointer;color:${c.text};opacity:0.6;flex-shrink:0;padding:2px;">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-        </button>
+        <button onclick="dismissAnnouncement(${a.id})" style="background:none;border:none;cursor:pointer;color:${c.text};opacity:0.6;flex-shrink:0;padding:2px;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
       </div>`;
     }).join('');
   } catch {}
+}
+
+function dismissAnnouncement(id) {
+  const dismissed = JSON.parse(localStorage.getItem('axia_dismissed_announcements') || '[]');
+  if (!dismissed.includes(id)) dismissed.push(id);
+  localStorage.setItem('axia_dismissed_announcements', JSON.stringify(dismissed));
+  loadAnnouncements();
+}
+
+function openAnnouncementModal() {
+  const listEl = document.getElementById('announcement-modal-list');
+  if (!listEl) return;
+  if (!_cachedAnnouncements.length) {
+    listEl.innerHTML = '<div style="text-align:center;color:var(--text3);padding:2rem 0;font-size:13px;">配信中のお知らせはありません</div>';
+  } else {
+    const dismissed = JSON.parse(localStorage.getItem('axia_dismissed_announcements') || '[]');
+    const ICONS = { info: '📢', warning: '⚠️', maintenance: '🔧' };
+    listEl.innerHTML = _cachedAnnouncements.map(a => {
+      const isRead = dismissed.includes(a.id);
+      return `<div style="background:var(--surface2);border-radius:var(--radius);padding:12px;position:relative;opacity:${isRead ? 0.7 : 1};border-left:3px solid ${isRead?'var(--text3)':'var(--accent)'};">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+          <span style="font-size:13px;font-weight:600;">${ICONS[a.type]||'📢'} ${a.title}</span>
+          <span class="badge" style="background:${isRead?'var(--border)':'var(--accent)'};color:${isRead?'var(--text2)':'var(--bg)'};font-size:10px;padding:1px 6px;">${isRead?'既読':'未読'}</span>
+        </div>
+        <div style="font-size:12px;color:var(--text2);line-height:1.5;white-space:pre-wrap;">${a.body}</div>
+        <div style="font-size:10px;color:var(--text3);margin-top:6px;text-align:right;">${new Date(a.created_at).toLocaleDateString('ja-JP')}</div>
+      </div>`;
+    }).join('');
+  }
+  openModal('announcement-modal');
 }
 
 function dismissAnnouncement(id) {
