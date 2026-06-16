@@ -166,7 +166,6 @@
   .template-btn:hover { border-color: var(--text) !important; background: var(--surface2) !important; transform: translateY(-1px); box-shadow: var(--shadow); }
   .template-btn:active { transform: scale(0.98) translateY(0); }
 
-
   .search-box { position: relative; margin-bottom: 12px; }
   .search-box input { padding-left: 38px; background: var(--surface); }
   .search-icon { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); }
@@ -180,7 +179,6 @@
     <div class="auth-logo">AXIA Sign</div>
     <div class="auth-sub">電子伝票システム — フェーズ1</div>
 
-
     <div id="login-form">
       <div class="field">
         <label>ログインID</label>
@@ -191,9 +189,7 @@
         <input type="password" id="login-password" placeholder="••••••••" autocomplete="current-password">
       </div>
       <button class="btn btn-primary" onclick="doLogin()" style="margin-top:6px">ログイン</button>
-
     </div>
-
   </div>
 </div>
 
@@ -426,11 +422,6 @@
         <button class="btn btn-primary btn-sm" onclick="changePassword()">パスワードを変更する</button>
       </div>
 
-
-
-
-
-
       <div class="card">
         <div class="card-title">PDF設定</div>
         <div class="setting-row">
@@ -587,7 +578,6 @@
 
 <div class="toast" id="toast"></div>
 
-<!-- ════════════ TEMPLATE SELECTOR OVERLAY ════════════ -->
 <div id="template-overlay" style="display:none;position:fixed;inset:0;z-index:600;background:var(--bg);flex-direction:column;align-items:center;justify-content:center;padding:2rem 1.5rem;">
   <div style="width:100%;max-width:480px;">
     <div style="text-align:center;margin-bottom:2rem;">
@@ -677,23 +667,16 @@
 <script>
 // ════════════ SUPABASE CONFIG ════════════
 const SB_URL = 'https://unoepkpszkwwctgibavg.supabase.co';
-// ✅ anon キー：ブラウザに露出しても安全（RLS が有効な限り他社データにアクセス不可）
-// ⛔ service_role キーは絶対にここに書かない
 const SB_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVub2Vwa3Bzemt3d2N0Z2liYXZnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkwMDg2NjQsImV4cCI6MjA5NDU4NDY2NH0.JRnrSI3Q4jNpkiC7EOguhcTIq0OSp42SnlcJPLxtd7U';
 
-// ── トークン管理 ──────────────────────────────────────────────
-// ログイン済みの場合は JWT アクセストークンを使う。
-// anon キーをそのまま Bearer に使うと RLS の auth.uid() が null になり
-// セキュリティポリシーが機能しないため、必ず JWT を使う。
 let _accessToken  = null;
 let _refreshToken = null;
-let _tokenExpiry  = 0; // Unix秒
+let _tokenExpiry  = 0;
 
 function setTokens(access, refresh, expiresIn) {
   _accessToken  = access;
   _refreshToken = refresh;
-  _tokenExpiry  = Math.floor(Date.now() / 1000) + (expiresIn || 3600) - 60; // 60秒前に更新
-  // リフレッシュトークンはセッションストレージに保持（ページリロード後も維持）
+  _tokenExpiry  = Math.floor(Date.now() / 1000) + (expiresIn || 3600) - 60;
   sessionStorage.setItem('axia_rt', refresh);
 }
 
@@ -704,13 +687,11 @@ function clearTokens() {
 }
 
 async function getValidToken() {
-  // トークンが有効期限内ならそのまま返す
   if (_accessToken && Math.floor(Date.now() / 1000) < _tokenExpiry) {
     return _accessToken;
   }
-  // リフレッシュトークンで再取得
   const rt = _refreshToken || sessionStorage.getItem('axia_rt');
-  if (!rt) return null; // 未ログイン
+  if (!rt) return null;
 
   try {
     const res = await fetch(`${SB_URL}/auth/v1/token?grant_type=refresh_token`, {
@@ -721,7 +702,6 @@ async function getValidToken() {
     if (!res.ok) { clearTokens(); return null; }
     const data = await res.json();
     setTokens(data.access_token, data.refresh_token, data.expires_in);
-    // currentUser のトークンも更新
     if (currentUser) {
       currentUser.token = data.access_token;
       localStorage.setItem('axia_user', JSON.stringify(currentUser));
@@ -733,17 +713,15 @@ async function getValidToken() {
   }
 }
 
-// ── API リクエスト（常に JWT で認証） ─────────────────────────
 async function sbFetch(table, method = 'GET', body = null, query = '') {
-  // JWT を取得（期限切れなら自動リフレッシュ）
   const token = await getValidToken();
   if (!token) throw new Error('セッションが切れました。再ログインしてください。');
 
   const res = await fetch(`${SB_URL}/rest/v1/${table}${query}`, {
     method,
     headers: {
-      'apikey':        SB_ANON_KEY,          // ← 公開鍵（anon）
-      'Authorization': 'Bearer ' + token,    // ← ユーザーの JWT（RLS がここを見る）
+      'apikey':        SB_ANON_KEY,
+      'Authorization': 'Bearer ' + token,
       'Content-Type':  'application/json',
       'Prefer': method === 'POST' ? 'return=representation'
               : method === 'PATCH' ? 'return=representation' : ''
@@ -751,7 +729,6 @@ async function sbFetch(table, method = 'GET', body = null, query = '') {
     body: body ? JSON.stringify(body) : null
   });
 
-  // 401 = トークン無効 → ログアウトへ誘導
   if (res.status === 401) {
     clearTokens();
     showToast('セッションが切れました。再ログインしてください。');
@@ -761,7 +738,6 @@ async function sbFetch(table, method = 'GET', body = null, query = '') {
 
   if (!res.ok) {
     const errData = await res.json().catch(() => ({}));
-    // テーブル未作成（404）は既知エラーとして console には出さない
     if (res.status !== 404) console.error('❌【Supabaseエラー】:', errData);
     throw new Error(errData.message || errData.details || `HTTP ${res.status}`);
   }
@@ -769,19 +745,15 @@ async function sbFetch(table, method = 'GET', body = null, query = '') {
   return res.json();
 }
 
-// ════════════ STATE ════════════
 let currentUser = null;
 let currentFilter = 'all';
 let currentDetailId = null;
 let signingQueueId = null;
 let fsCanvas, fsCtx, fsDrawing = false, fsLastX = 0, fsLastY = 0, fsHasDraw = false;
 
-// ════════════ SETTINGS（ローカルのみ）════════════
 function getSettings() { try { return JSON.parse(localStorage.getItem('denpo_v1_settings') || '{}'); } catch { return {}; } }
 function saveSettingsData(s) { localStorage.setItem('denpo_v1_settings', JSON.stringify(s)); }
 
-// ════════════ AUTH ════════════
-// IDをSupabase用ダミーメールに変換（例: tanaka → tanaka@axia-sign.internal）
 function idToEmail(loginId) {
   return loginId.toLowerCase().replace(/[^a-z0-9_\-]/g, '') + '@axia-sign.internal';
 }
@@ -823,10 +795,7 @@ async function doLogout() {
       method: 'POST',
       headers: { 'apikey': SB_ANON_KEY, 'Authorization': 'Bearer ' + token }
     });
-  } catch(e) {
-    // サーバー側でエラーが起きてもスルーして次へ進む
-  }
-  // サーバーの成否に関わらず、ブラウザの記憶を確実に消去して戻す
+  } catch(e) {}
   clearTokens();
   localStorage.removeItem('axia_user');
   currentUser = null;
@@ -835,7 +804,7 @@ async function doLogout() {
   document.getElementById('auth-screen').style.display = 'flex';
   document.getElementById('app').style.display = 'none';
   hideLoading();
-  location.reload(); // 画面をリフレッシュして安全に初期化
+  location.reload();
 }
 
 async function enterApp() {
@@ -846,7 +815,7 @@ async function enterApp() {
   const idEl   = document.getElementById('s-company-id');
   if (nameEl) nameEl.textContent = currentUser.company || '（未設定）';
   if (idEl)   idEl.textContent   = currentUser.company_id || '—';
-  _logoCache = undefined; // ログインのたびにロゴを再取得
+  _logoCache = undefined;
   await loadCompanySettings();
   applyCompanySettings();
   initFullSignPad();
@@ -859,8 +828,7 @@ async function enterApp() {
   loadAnnouncements();
 }
 
-// ════════════ COMPANY SETTINGS（会社別カスタマイズ）════════════
-let companySettings = null; // { plan, templates, home_layout, feature_flags }
+let companySettings = null;
 
 const DEFAULT_FEATURE_FLAGS = {
   csv_export: true,
@@ -888,14 +856,12 @@ function getHomeLayout() {
   return { ...DEFAULT_HOME_LAYOUT, ...(companySettings?.home_layout || {}) };
 }
 
-// プランごとの月間伝票発行上限
 const PLAN_LIMITS = { light: 50, standard: 300, premium: 9999 };
 
 function getCurrentPlan() {
   return companySettings?.plan || 'standard';
 }
 
-// 今月の伝票発行数を取得し、上限に達しているか確認する
 async function checkUsageLimit() {
   const plan  = getCurrentPlan();
   const limit = PLAN_LIMITS[plan] ?? 9999;
@@ -909,25 +875,21 @@ async function checkUsageLimit() {
     const count = (rows || []).length;
     return { ok: count < limit, count, limit };
   } catch {
-    return { ok: true, count: 0, limit }; // 確認できない場合はブロックしない
+    return { ok: true, count: 0, limit };
   }
 }
 
-// 会社設定をUIに反映する
 function applyCompanySettings() {
-  // ① テンプレート定義の上書き
   if (companySettings?.templates && Object.keys(companySettings.templates).length) {
     TEMPLATES = companySettings.templates;
   }
 
-  // ② チェックリスト項目の上書き（最初のテンプレートのchecklist_labelsを使う、なければデフォルト維持）
   const customChecklist = companySettings?.templates?._checklist_labels;
   if (Array.isArray(customChecklist) && customChecklist.length) {
     CHECKLIST_LABELS = customChecklist;
   }
   renderChecklist();
 
-  // ③ ホーム画面レイアウト
   const layout = getHomeLayout();
   const statsEl  = document.querySelector('#screen-home .stats');
   const recentHeader = document.querySelector('#screen-home .section-header');
@@ -936,7 +898,6 @@ function applyCompanySettings() {
   if (recentHeader) recentHeader.style.display = layout.show_recent ? '' : 'none';
   if (recentBody)   recentBody.style.display   = layout.show_recent ? '' : 'none';
 
-  // ④ 機能フラグ（CSV・メール送信・元請けマスター）
   const flags = getFeatureFlags();
   document.querySelectorAll('.feature-csv').forEach(el => el.style.display = flags.csv_export ? '' : 'none');
   document.querySelectorAll('.feature-email').forEach(el => el.style.display = flags.email_send ? '' : 'none');
@@ -949,7 +910,6 @@ function setGreeting() {
   document.getElementById('home-greeting').textContent = g + '、' + (currentUser.company || currentUser.name || '') + 'さん';
 }
 
-// ════════════ お知らせバナー ════════════
 async function loadAnnouncements() {
   try {
     const today = new Date().toISOString().split('T')[0];
@@ -982,7 +942,7 @@ async function loadAnnouncements() {
         </button>
       </div>`;
     }).join('');
-  } catch { /* announcementsテーブル未作成時はサイレント */ }
+  } catch {}
 }
 
 function dismissAnnouncement(id) {
@@ -992,14 +952,12 @@ function dismissAnnouncement(id) {
   loadAnnouncements();
 }
 
-// ════════════ STAFF MANAGEMENT ════════════
 async function fetchStaffList() {
   try {
     const rows = await sbFetch('staff', 'GET', null, `?company_id=eq.${currentUser.company_id}&order=created_at.asc`);
     return (rows || []).map(r => r.name);
   } catch { return []; }
 }
-
 
 async function refreshStaffSelect() {
   const list = await fetchStaffList();
@@ -1028,7 +986,6 @@ function getSelectedStaff() {
   return sel.value;
 }
 
-// ════════════ TEMPLATE SELECTOR（職種テンプレート）════════════
 let TEMPLATES = {
   traffic:  { label: '交通誘導', emoji: '🚦', checkLabels: ['工事関係車両・音響の管理', '交互通行', 'その他'] },
   facility: { label: '施設警備', emoji: '🏢', checkLabels: ['設備の巡回・点検', '一般廃棄物の処理', 'その他'] },
@@ -1036,7 +993,6 @@ let TEMPLATES = {
 };
 
 async function onNewSlipClick() {
-  // 利用上限チェック
   showLoading('確認中...');
   const usage = await checkUsageLimit();
   hideLoading();
@@ -1044,7 +1000,6 @@ async function onNewSlipClick() {
     showUsageLimitModal(usage);
     return;
   }
-  // 新規作成時に毎回テンプレートを選ばせる
   _currentTemplate = null;
   updateTemplateBadge();
   showTemplateSelector();
@@ -1080,10 +1035,8 @@ function selectTemplate(tpl) {
   const overlay = document.getElementById('template-overlay');
   if (overlay) { overlay.style.display = 'none'; document.body.style.overflow = ''; }
 
-  // ヘッダーバッジ更新
   updateTemplateBadge();
 
-  // テンプレートに対応するチェックをあらかじめ ON にする
   if (tpl && TEMPLATES[tpl]) {
     const tplChecks = TEMPLATES[tpl].checkLabels;
     CHECKLIST_LABELS.forEach((label, i) => {
@@ -1091,17 +1044,13 @@ function selectTemplate(tpl) {
       if (el) el.checked = tplChecks.includes(label);
     });
   } else {
-    // テンプレートなし → 全チェックを外す
     CHECKLIST_LABELS.forEach((_, i) => {
       const el = document.getElementById('chk-' + i);
       if (el) el.checked = false;
     });
   }
 
-  // サジェストをテンプレート絞り込みで再ロード
   loadSiteSuggestions();
-
-  // 新規作成画面に移動
   switchScreen('new');
 }
 
@@ -1118,27 +1067,22 @@ function updateTemplateBadge() {
   }
 }
 
-// ════════════ SITE SUGGESTIONS（現場名サジェスト）════════════
-let _currentTemplate = null; // 選択中のテンプレート（職種）
+let _currentTemplate = null;
 async function loadSiteSuggestions() {
   const dl = document.getElementById('site-suggestions');
   if (!dl) return;
   try {
-    const qs = _currentTemplate
-      ? `?company_id=eq.${currentUser.company_id}&select=site&order=created_at.desc&limit=200`
-      : `?company_id=eq.${currentUser.company_id}&select=site&order=created_at.desc&limit=200`;
+    const qs = `?company_id=eq.${currentUser.company_id}&select=site&order=created_at.desc&limit=200`;
     const rows = await sbFetch('records', 'GET', null, qs);
-    // 重複なし・テンプレートでフィルタ済みのサイト名リスト
     const seen = new Set();
     const sites = [];
     for (const r of rows) {
       if (!r.site) continue;
-      // テンプレートが選択されていれば一致するもののみ
       if (_currentTemplate && r.template && r.template !== _currentTemplate) continue;
       if (!seen.has(r.site)) { seen.add(r.site); sites.push(r.site); }
     }
     dl.innerHTML = sites.map(s => `<option value="${s.replace(/"/g,'&quot;')}">`).join('');
-  } catch { /* サジェスト取得失敗はサイレント */ }
+  } catch {}
 }
 
 async function refreshClientSelect() {
@@ -1151,50 +1095,37 @@ async function refreshClientSelect() {
   if (prev) sel.value = prev;
 }
 
-// ════════════ SLIP NUMBER GENERATION（伝票番号自動生成）════════════
-// company_id や company名から3文字のプレフィックスを生成
-// 例: "株式会社アクシア" → "AKS"、"co_1234_abcdef" → "ABC"
 function companyPrefix() {
-  // 1) company名（日本語）があればローマ字先頭3文字を試みる
   const name = (currentUser?.company || '').replace(/[株式会社有限会社合同会社]/g, '').trim();
-  // 2) なければ company_id の英数字部分から3文字
   const cid = (currentUser?.company_id || '').replace(/[^a-zA-Z0-9]/g, '');
-  // どちらかから大文字3文字を取る
   const src = (name.replace(/[^a-zA-Z0-9]/g, '') || cid).toUpperCase().replace(/[^A-Z0-9]/g, '');
   if (src.length >= 3) return src.slice(0, 3);
-  // 文字数が足りなければ右側を数字で埋める
   return (src + '000').slice(0, 3);
 }
 
-// YYMMDD-XXX-NNN 形式で伝票番号を生成
 async function generateSlipNo(dateVal) {
   const d = dateVal || document.getElementById('f-date')?.value || new Date().toISOString().split('T')[0];
-  // YY MM DD
   const parts = d.split('-');
   const yy = parts[0].slice(-2);
   const mm = parts[1] || '00';
   const dd = parts[2] || '00';
   const prefix = companyPrefix();
-  const dateStr = yy + mm + dd; // 例: 260610
+  const dateStr = yy + mm + dd;
 
-  // その日付・会社で何件目かをSupabaseから取得
   try {
     const rows = await sbFetch('records', 'GET', null,
       `?company_id=eq.${currentUser.company_id}&date=eq.${d}&select=slip_no&order=created_at.asc`);
-    // sign_queue も含めてカウント（当日作成中のものも考慮）
     const qrows = await sbFetch('sign_queue', 'GET', null,
       `?company_id=eq.${currentUser.company_id}&date=eq.${d}&select=slip_no`);
     const existingCount = (rows?.length || 0) + (qrows?.length || 0);
     const seq = String(existingCount + 1).padStart(3, '0');
     return `${dateStr}-${prefix}-${seq}`;
   } catch {
-    // API失敗時は日時ベースのフォールバック
     const seq = String(Math.floor(Date.now() / 1000) % 1000).padStart(3, '0');
     return `${dateStr}-${prefix}-${seq}`;
   }
 }
 
-// 稼働日変更時に伝票番号を再生成
 async function onDateChange() {
   const el = document.getElementById('f-slip-no');
   if (!el) return;
@@ -1202,7 +1133,6 @@ async function onDateChange() {
   el.value = await generateSlipNo();
 }
 
-// ════════════ FORM DEFAULTS ════════════
 function loadSettings() {
   const s = getSettings();
   if (s.sender)     { const el = document.getElementById('s-sender');      if(el) el.value = s.sender; }
@@ -1215,7 +1145,6 @@ function saveSettings() {
   saveSettingsData(s); showToast('設定を保存しました');
 }
 
-// ════════════ パスワード変更 ════════════
 async function changePassword() {
   const current = document.getElementById('pw-current').value;
   const newPass = document.getElementById('pw-new').value;
@@ -1228,7 +1157,6 @@ async function changePassword() {
 
   showLoading('確認中...');
   try {
-    // ① 現在のパスワードが正しいか再認証で確認
     const email = currentUser.email;
     const checkRes = await fetch(`${SB_URL}/auth/v1/token?grant_type=password`, {
       method: 'POST',
@@ -1243,7 +1171,6 @@ async function changePassword() {
     const checkData = await checkRes.json();
     const freshToken = checkData.access_token;
 
-    // ② パスワードを更新
     showLoading('パスワードを変更中...');
     const updateRes = await fetch(`${SB_URL}/auth/v1/user`, {
       method: 'PUT',
@@ -1257,7 +1184,6 @@ async function changePassword() {
     const updateData = await updateRes.json();
     if (!updateRes.ok) throw new Error(updateData.msg || updateData.error_description || '変更に失敗しました');
 
-    // ③ 新しいトークンに更新（再ログイン不要に）
     setTokens(checkData.access_token, checkData.refresh_token, checkData.expires_in);
 
     hideLoading();
@@ -1268,7 +1194,6 @@ async function changePassword() {
   } catch(e) { hideLoading(); showToast('エラー: ' + e.message); }
 }
 
-// ════════════ SCREEN ROUTING ════════════
 async function switchScreen(name) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
@@ -1282,7 +1207,6 @@ async function switchScreen(name) {
   window.scrollTo(0, 0);
 }
 
-// ════════════ HOME ════════════
 async function updateHome() {
   try {
     const [records, queue] = await Promise.all([
@@ -1306,8 +1230,6 @@ async function updateHome() {
   } catch(e) { showToast('データ読み込みエラー'); }
 }
 
-// ════════════ QUEUE ════════════
-// 作業時間行の追加
 let timeRowCount = 0;
 function addTimeRow(data = {}) {
   const tbody = document.getElementById('time-rows-body');
@@ -1338,10 +1260,8 @@ function calcHours(start, end, breakH) {
   const [sh,sm] = start.split(':').map(Number);
   const [eh,em] = end.split(':').map(Number);
   let startMin = sh*60+sm, endMin = eh*60+em;
-  if (endMin <= startMin) endMin += 24*60; // 日をまたぐ
-  // 休憩時間を差し引いた実働分数（ここで一度だけ引く）
+  if (endMin <= startMin) endMin += 24*60;
   const workMin = Math.max(0, endMin - startMin - (parseFloat(breakH)||0)*60);
-  // 時間帯区分: 早朝5〜8時、深夜22〜翌5時（29時扱い）
   let normal=0, late=0, early=0;
   for (let m = startMin; m < startMin + workMin; m++) {
     const actual = m % (24*60);
@@ -1349,11 +1269,9 @@ function calcHours(start, end, breakH) {
     else if (actual >= 22*60 || actual < 5*60) late += 1/60;
     else normal += 1/60;
   }
-  // ※ 休憩はworkMinで既に除外済みのため、ここでは再減算しない
   return { total: normal+late+early, normal: Math.round(normal*10)/10, late: Math.round(late*10)/10, early: Math.round(early*10)/10 };
 }
 
-// 普通・深夜・早朝それぞれの単価から合計金額を算出（共通ヘルパー）
 function calcAmountFromRecord(r, tNormal, tLate, tEarly) {
   const baseP  = r.unit_price       || 0;
   const lateP  = r.unit_price_late  || baseP;
@@ -1391,7 +1309,7 @@ function recalcTime() {
   document.getElementById('total-all').textContent    = tAll.toFixed(1);
   calcAmount();
 }
-// 普通単価入力時：深夜・早朝単価が未入力なら25%増を自動セット
+
 function onBasePriceInput() {
   const base = parseFloat(document.getElementById('f-unit-price')?.value) || 0;
   const lateEl  = document.getElementById('f-unit-price-late');
@@ -1418,7 +1336,6 @@ function calcAmount() {
   const el = document.getElementById('f-amount');
   if (el) el.value = amount > 0 ? amount.toLocaleString('ja-JP') + '円' : '';
 
-  // 内訳表示
   const breakdownEl = document.getElementById('amount-breakdown');
   if (breakdownEl) {
     const rows = [];
@@ -1434,13 +1351,13 @@ function calcAmount() {
   }
 }
 
-// 深夜・早朝単価が手動編集されたらフラグを立てて自動上書きを止める
 document.addEventListener('DOMContentLoaded', () => {
   ['f-unit-price-late', 'f-unit-price-early'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.addEventListener('input', () => { el.dataset.manual = '1'; });
   });
 });
+
 function getTimeRows() {
   const tbody = document.getElementById('time-rows-body');
   if (!tbody) return [];
@@ -1458,12 +1375,12 @@ function getTimeRows() {
     };
   });
 }
+
 function getChecklist() {
   return CHECKLIST_LABELS.map((_, i) => document.getElementById(`chk-${i}`)?.checked || false);
 }
 let CHECKLIST_LABELS = ['設備の巡回・点検','清掃作業','一般廃棄物の処理','非業自らの発生ゴミ処理','工事関係車両・音響の管理','廃材回収・運搬作業','交互通行','その他'];
 
-// チェックリストUIを動的に生成
 function renderChecklist() {
   const container = document.getElementById('checklist-container');
   if (!container) return;
@@ -1504,9 +1421,20 @@ function validate(d) {
   return true;
 }
 
+// 🔒 ハードリミット（今月の利用量ブロック）を保存直前にも適用した関数
 async function sendToSignQueue() {
   const d = getFormData();
   if (!validate(d)) return;
+
+  // ⚠️ 保存の直前に最新の今月の作成件数をチェックしてブロック
+  showLoading('利用上限を確認中...');
+  const usage = await checkUsageLimit();
+  if (!usage.ok) {
+    hideLoading();
+    showUsageLimitModal(usage);
+    return;
+  }
+
   showLoading('保存中...');
   try {
     await sbFetch('sign_queue', 'POST', {
@@ -1577,7 +1505,6 @@ async function setDefaults() {
   await refreshStaffSelect();
   await loadSiteSuggestions();
   await refreshClientSelect();
-  // 伝票番号を自動生成
   const slipEl = document.getElementById('f-slip-no');
   if (slipEl) {
     slipEl.value = await generateSlipNo(today);
@@ -1629,7 +1556,6 @@ async function removeFromQueue(id) {
   } catch(e) { showToast('エラー：' + e.message); }
 }
 
-// ════════════ SIGN FLOW ════════════
 async function openSignFlow(id) {
   signingQueueId = id;
   try {
@@ -1646,7 +1572,6 @@ async function openSignFlow(id) {
     const amount  = amtCalc.total;
     const checks  = item.checklist || [];
 
-    // 基本情報
     const basicRows = [
       ['案件名',   item.project],
       ['現場名',   item.site],
@@ -1656,7 +1581,6 @@ async function openSignFlow(id) {
       ...(item.note    ? [['備考',    item.note]]    : []),
     ];
 
-    // 時間テーブル
     let timeTableHTML = '<span style="font-size:13px;color:var(--text3);">—</span>';
     if (timeRows.length) {
       let tbRows = '';
@@ -1697,7 +1621,6 @@ async function openSignFlow(id) {
         + '</tfoot></table></div>';
     }
 
-    // チェックリスト
     const checkedLabels = CHECKLIST_LABELS.filter(function(_,i){ return checks[i]; });
     let checklistHTML = '<span style="font-size:13px;color:var(--text3);">チェックなし</span>';
     if (checkedLabels.length) {
@@ -1706,7 +1629,6 @@ async function openSignFlow(id) {
       }).join(' ');
     }
 
-    // 金額
     let amountHTML = '';
     if (item.unit_price) {
       const breakdownParts = [];
@@ -1719,7 +1641,6 @@ async function openSignFlow(id) {
         + '</div>';
     }
 
-    // 基本情報行
     let basicHTML = '';
     basicRows.forEach(function(row, i) {
       basicHTML += '<div style="display:flex;padding:10px 16px;background:' + (i%2===0?'var(--surface2)':'var(--surface)') + '">'
@@ -1766,12 +1687,10 @@ function backToConfirmStep() {
   clearFullSign();
 }
 
-// ════════════ FULLSCREEN SIGN PAD（ズレの修正箇所） ════════════
 function initFullSignPad() {
   fsCanvas = document.getElementById('fullSignPad');
   fsCtx = fsCanvas.getContext('2d');
 
-  // 【修正】高解像度化に惑わされないシンプルなCSSピクセル相対座標に変更
   function pos(e) {
     const r = fsCanvas.getBoundingClientRect();
     const src = e.touches ? e.touches[0] : e;
@@ -1806,7 +1725,7 @@ function resizeFullSignPad() {
   const rect = fsCanvas.getBoundingClientRect();
   fsCanvas.width = rect.width * dpr;
   fsCanvas.height = rect.height * dpr;
-  fsCtx.scale(dpr, dpr); // コンテキストの拡大
+  fsCtx.scale(dpr, dpr);
   fsCtx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--text').trim() || '#1a1917';
   fsCtx.lineWidth = 3;
   fsCtx.lineCap = 'round';
@@ -1852,7 +1771,6 @@ async function completeSign() {
     });
     await sbFetch('sign_queue', 'DELETE', null, `?id=eq.${signingQueueId}&company_id=eq.${currentUser.company_id}`);
 
-    // PDF生成（非同期対応に変更）
     await generatePDF({ ...item, sig_data: sigData, has_sig: true, signed_at: new Date().toISOString() }, true);
     
     hideLoading();
@@ -1863,19 +1781,14 @@ async function completeSign() {
   } catch(e) { hideLoading(); showToast('エラー：' + e.message); }
 }
 
-// ════════════ PDF GENERATION（文字化け・レイアウトの完全修正箇所） ════════════
-// ════════════ LOGO MANAGEMENT（Supabase Storage同期）════════════
 const LOGO_BUCKET = 'logos';
 
-// 会社ごとのロゴパス（company_id単位で1ファイル共有）
 function logoPath() {
   return `${currentUser.company_id}/logo`;
 }
 
-// Supabaseへアップロード
 async function uploadLogoToStorage(file) {
   const path = logoPath();
-  // ✅ ロゴのアップロードも JWT で認証（RLS ポリシーが自社フォルダのみ許可）
   const token = await getValidToken();
   if (!token) throw new Error('セッションが切れました');
   const res = await fetch(
@@ -1886,7 +1799,7 @@ async function uploadLogoToStorage(file) {
         'apikey':        SB_ANON_KEY,
         'Authorization': 'Bearer ' + token,
         'Content-Type':  file.type,
-        'x-upsert':      'true'   // 上書きOK
+        'x-upsert':      'true'
       },
       body: file
     }
@@ -1897,15 +1810,12 @@ async function uploadLogoToStorage(file) {
   }
 }
 
-// Supabase Storage のロゴ取得URL（非公開バケット → 認証付きエンドポイントを使う）
 async function logoAuthenticatedUrl() {
   const token = await getValidToken();
   if (!token) return null;
-  // /object/authenticated/ エンドポイントは認証済みユーザーのみアクセス可
   return `${SB_URL}/storage/v1/object/authenticated/${LOGO_BUCKET}/${logoPath()}`;
 }
 
-// Supabaseからロゴを削除
 async function deleteLogoFromStorage() {
   const token = await getValidToken();
   if (!token) throw new Error('セッションが切れました');
@@ -1923,7 +1833,6 @@ async function deleteLogoFromStorage() {
   );
 }
 
-// ロゴが存在するか確認（JWT 認証付きで取得）
 async function fetchLogoDataUrl() {
   try {
     const token = await getValidToken();
@@ -1945,8 +1854,7 @@ async function fetchLogoDataUrl() {
   } catch { return null; }
 }
 
-// キャッシュ（端末内）— 毎回ダウンロードしないよう一時保持
-let _logoCache = undefined; // undefined=未取得, null=なし, string=dataUrl
+let _logoCache = undefined;
 
 async function getLogoDataUrl() {
   if (_logoCache !== undefined) return _logoCache;
@@ -1961,7 +1869,7 @@ function onLogoSelected(input) {
   showLoading('ロゴをアップロード中...');
   uploadLogoToStorage(file)
     .then(() => {
-      _logoCache = undefined; // キャッシュをクリアして再取得させる
+      _logoCache = undefined;
       return fetchLogoDataUrl();
     })
     .then(dataUrl => {
@@ -2009,7 +1917,6 @@ async function generatePDF(r, download) {
     ? `<img src="${logoDataUrl}" style="max-height:44px;max-width:160px;object-fit:contain;filter:brightness(0) invert(1);">`
     : `<span style="font-size:14px;font-weight:bold;">AXIA Sign</span>`;
 
-  // 時間合計
   const rows = r.time_rows || [];
   const tNormal = rows.reduce((s,x)=>s+(x.normal||0),0);
   const tLate   = rows.reduce((s,x)=>s+(x.late||0),0);
@@ -2018,11 +1925,9 @@ async function generatePDF(r, download) {
   const amtCalc = calcAmountFromRecord(r, tNormal, tLate, tEarly);
   const amount  = amtCalc.total;
 
-  // チェックリスト
   const checks = r.checklist || [];
   const checkedItems = CHECKLIST_LABELS.filter((_,i)=>checks[i]);
 
-  // 時間行テーブル
   const timeTableRows = rows.length ? rows.map(row=>`
     <tr>
       <td style="padding:5px 6px;border:1px solid #e8e7e3;font-size:10px;text-align:center;">${row.date||'—'}</td>
@@ -2036,7 +1941,6 @@ async function generatePDF(r, download) {
     </tr>`).join('') : `<tr><td colspan="8" style="padding:12px;border:1px solid #e8e7e3;text-align:center;color:#9e9b95;font-size:13px;">—</td></tr>`;
 
   container.innerHTML = `
-    <!-- ヘッダー -->
     <div style="background:#1a1917;color:#fff;padding:14px 18px;display:flex;justify-content:space-between;align-items:center;border-radius:5px;">
       <div>
         <div style="font-size:9px;letter-spacing:2px;opacity:0.55;margin-bottom:2px;">SERVICE COMPLETION SLIP</div>
@@ -2045,7 +1949,6 @@ async function generatePDF(r, download) {
       ${headerRight}
     </div>
 
-    <!-- 発行情報 -->
     <div style="margin-top:8px;display:flex;justify-content:space-between;font-size:10px;color:#6b6963;padding:0 2px;">
       <div>発行：${new Date(r.signed_at||r.created_at||Date.now()).toLocaleString('ja-JP')}</div>
       <div style="display:flex;gap:14px;">
@@ -2054,7 +1957,6 @@ async function generatePDF(r, download) {
       </div>
     </div>
 
-    <!-- 案件情報 2列レイアウト -->
     <table style="width:100%;border-collapse:collapse;margin-top:8px;">
       <tr>
         <td style="width:50%;padding:0;vertical-align:top;">
@@ -2078,7 +1980,6 @@ async function generatePDF(r, download) {
       </tr>
     </table>
 
-    <!-- 作業時間テーブル -->
     <div style="margin-top:10px;">
       <div style="font-size:11px;font-weight:600;color:#6b6963;margin-bottom:4px;">作業時間</div>
       <table style="width:100%;border-collapse:collapse;">
@@ -2110,7 +2011,6 @@ async function generatePDF(r, download) {
       </table>
     </div>
 
-    <!-- 作業内容・備考・金額を横並び -->
     <div style="display:flex;gap:8px;margin-top:10px;align-items:flex-start;">
       ${checkedItems.length ? `
       <div style="flex:1;">
@@ -2139,7 +2039,6 @@ async function generatePDF(r, download) {
       </div>` : ''}
     </div>
 
-    <!-- サイン欄 -->
     <div style="margin-top:10px;display:flex;gap:10px;align-items:stretch;">
       <div style="flex:1;">
         <div style="font-size:11px;font-weight:600;color:#6b6963;margin-bottom:4px;">お客様ご確認サイン</div>
@@ -2153,7 +2052,6 @@ async function generatePDF(r, download) {
       </div>
     </div>
 
-    <!-- フッター -->
     <div style="margin-top:10px;border-top:1px solid #e8e7e3;padding-top:8px;display:flex;justify-content:space-between;align-items:center;font-size:9px;color:#9e9b95;">
       <div style="display:flex;align-items:center;gap:6px;">
         ${logoDataUrl?`<img src="${logoDataUrl}" style="max-height:16px;max-width:60px;object-fit:contain;opacity:0.5;">`:''}
@@ -2171,22 +2069,18 @@ async function generatePDF(r, download) {
   const doc = new jsPDF({ unit:'mm', format:'a4' });
   const pageW = 210, pageH = 297;
   const imgW  = pageW;
-  const imgH  = (canvas.height * imgW) / canvas.width; // PDF上の全体高さ(mm)
+  const imgH  = (canvas.height * imgW) / canvas.width;
 
-  // サイン欄は全体の下部 約22% を占める（目視で調整可）
   const signAreaH = imgH * 0.22;
 
   if (imgH <= pageH) {
-    // 1ページに収まる
     doc.addImage(canvas.toDataURL('image/jpeg',0.95), 'JPEG', 0, 0, imgW, imgH);
   } else {
-    // 複数ページ：サイン欄がページ境界にかかるか確認
-    const contentH   = imgH - signAreaH;  // サイン欄より上の高さ
-    const page1H     = pageH;             // 1ページ目に入る高さ
-    const signStartY = contentH;          // サイン欄開始位置(mm)
+    const contentH   = imgH - signAreaH;
+    const page1H     = pageH;
+    const signStartY = contentH;
 
     if (signStartY + signAreaH <= page1H) {
-      // サイン欄が1ページ目に収まる場合 → そのまま分割
       let yPos = 0;
       while (yPos < imgH) {
         if (yPos > 0) doc.addPage();
@@ -2194,12 +2088,10 @@ async function generatePDF(r, download) {
         yPos += pageH;
       }
     } else {
-      // サイン欄がページ境界にかかる → コンテンツ部分を先に出力し、サイン欄は必ず新ページ先頭へ
-      const scale   = canvas.width / imgW; // px/mm
+      const scale   = canvas.width / imgW;
       const contentPx  = Math.floor(contentH * scale);
       const signPx     = canvas.height - contentPx;
 
-      // コンテンツ部分をページ分割して出力
       const contentCanvas = document.createElement('canvas');
       contentCanvas.width  = canvas.width;
       contentCanvas.height = contentPx;
@@ -2213,7 +2105,6 @@ async function generatePDF(r, download) {
         yPos += pageH;
       }
 
-      // サイン欄を必ず新ページ先頭へ
       doc.addPage();
       const signCanvas = document.createElement('canvas');
       signCanvas.width  = canvas.width;
@@ -2231,7 +2122,6 @@ async function generatePDF(r, download) {
   return doc.output('datauristring');
 }
 
-// ════════════ LIST ════════════
 function setFilter(f, el) {
   currentFilter = f;
   document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
@@ -2308,7 +2198,6 @@ async function deleteRecord(id) {
   } catch(e) { showToast('エラー：' + e.message); }
 }
 
-// ════════════ DETAIL MODAL ════════════
 async function openDetail(id) {
   currentDetailId = id;
   try {
@@ -2338,7 +2227,6 @@ async function openDetail(id) {
   } catch(e) { showToast('エラー：' + e.message); }
 }
 
-// ════════════ CLIENT MASTER（元請け企業マスター）════════════
 async function addClient() {
   if (_clientsTableExists === false) {
     showToast('clients テーブルが未作成です。Supabaseでテーブルを作成してください');
@@ -2365,10 +2253,10 @@ async function deleteClient(id) {
   } catch(e) { showToast('エラー：' + e.message); }
 }
 
-let _clientsTableExists = null; // null=未確認, true=あり, false=なし
+let _clientsTableExists = null;
 
 async function fetchClients() {
-  if (_clientsTableExists === false) return []; // テーブルなしが確定済みなら即return
+  if (_clientsTableExists === false) return [];
   try {
     const result = await sbFetch('clients', 'GET', null,
       `?company_id=eq.${currentUser.company_id}&order=name.asc`);
@@ -2376,7 +2264,7 @@ async function fetchClients() {
     return result || [];
   } catch(e) {
     if (e.message.includes('404') || e.message.includes('relation') || e.message.includes('does not exist')) {
-      _clientsTableExists = false; // テーブルなし確定 → 以降は呼ばない
+      _clientsTableExists = false;
     }
     return [];
   }
@@ -2406,7 +2294,6 @@ async function renderClientSettings() {
     </div>`).join('');
 }
 
-// ════════════ EMAIL SETTINGS ════════════
 function saveEmailSettings() {
   const s = getSettings();
   s.resendKey  = document.getElementById('s-resend-key').value.trim();
@@ -2415,7 +2302,6 @@ function saveEmailSettings() {
   showToast('メール設定を保存しました');
 }
 
-// ════════════ EMAIL MODAL ════════════
 async function openEmailModal(id) {
   currentDetailId = id;
   try {
@@ -2428,12 +2314,10 @@ async function openEmailModal(id) {
     const companyFrom = s2.sender || currentUser.company || '';
     document.getElementById('email-body').value = `お世話になっております。\n${r.project}（${r.date}）の作業が完了しましたので、完了伝票PDFをお送りします。\nご確認のほど、よろしくお願いいたします。\n\n─────────────────\n${companyFrom}\n担当：${staffName}`;
     document.getElementById('email-status').textContent = '';
-    // 元請けプルダウンを更新
     const clients = await fetchClients();
     const sel = document.getElementById('email-client-select');
     sel.innerHTML = '<option value="">── 企業を選択（または下で直接入力）──</option>' +
       clients.map(c => `<option value="${c.id}" data-email="${c.email}">${c.name}</option>`).join('');
-    // 伝票に元請けが紐付いていれば自動選択
     if (r.client_id) {
       sel.value = r.client_id;
       onEmailClientChange();
@@ -2456,7 +2340,7 @@ function onEmailClientChange() {
   const wrap    = document.getElementById('email-to-wrap');
   if (opt && opt.dataset.email) {
     emailEl.value = opt.dataset.email;
-    wrap.style.display = 'none'; // 企業選択済みなら手入力欄は隠す
+    wrap.style.display = 'none';
   } else {
     emailEl.value = '';
     wrap.style.display = '';
@@ -2474,7 +2358,6 @@ async function sendEmail() {
   if (!to) { showToast('送信先を選択または入力してください'); return; }
   if (!subject) { showToast('件名を入力してください'); return; }
 
-  // Resend APIキーがなければデモ送信
   if (!s.resendKey || !s.resendFrom) {
     closeModal('email-modal');
     showToast('Resend API未設定のためデモ送信（設定画面でAPIキーを登録してください）');
@@ -2488,11 +2371,10 @@ async function sendEmail() {
   btn.disabled = true;
 
   try {
-    // PDFをbase64で生成
     showLoading('PDF生成中...');
     const rows = await sbFetch('records', 'GET', null, `?id=eq.${currentDetailId}&company_id=eq.${currentUser.company_id}`);
     const r = rows[0];
-    const pdfUri = await generatePDF(r, false); // datauri
+    const pdfUri = await generatePDF(r, false);
     hideLoading();
     const pdfBase64 = pdfUri.split(',')[1];
     const filename  = '伝票_' + (r.project||'無題') + '_' + (r.date||'') + '.pdf';
@@ -2516,7 +2398,6 @@ async function sendEmail() {
     const data = await res.json();
     if (!res.ok) throw new Error(data.message || '送信失敗');
 
-    // 送信ログをSupabaseに保存
     try {
       await sbFetch('email_logs', 'POST', {
         company_id:  currentUser.company_id,
@@ -2530,7 +2411,7 @@ async function sendEmail() {
         status:      'sent',
         sent_at:     new Date().toISOString(),
       });
-    } catch { /* ログ保存失敗はサイレント */ }
+    } catch {}
 
     statusEl.style.color = 'var(--green-text)';
     statusEl.textContent = '✓ 送信しました（' + to + '）';
@@ -2548,7 +2429,6 @@ document.querySelectorAll('.modal-backdrop').forEach(b => {
   b.addEventListener('click', e => { if (e.target === b) b.classList.remove('open'); });
 });
 
-// ════════════ DATA UTILS ════════════
 async function exportData() {
   showLoading('エクスポート中...');
   try {
@@ -2563,14 +2443,13 @@ async function exportData() {
     hideLoading(); showToast('エクスポートしました');
   } catch(e) { hideLoading(); showToast('エラー：' + e.message); }
 }
-// ════════════ CSV EXPORT（給与ソフト対応）════════════
-// 各フォーマット列定義
+
 const CSV_FORMATS = {
   kotw: {
     label: 'KING OF TIME',
     headers: ['社員番号','氏名','日付','開始時刻','終了時刻','休憩時間(h)','普通時間','深夜時間','早朝時間','実働時間','備考'],
     row: (r, tr) => [
-      '',                          // 社員番号（未実装）
+      '',
       tr.name || r.staff,
       tr.date || r.date,
       tr.start,
@@ -2663,13 +2542,11 @@ async function exportCSV(format) {
       if (timeRows.length) {
         for (const tr of timeRows) lines.push(fmt.row(r, tr).map(csvEscape).join(','));
       } else {
-        // time_rowsがない古いレコードは1行で出力
         lines.push(fmt.row(r, { name: r.staff, date: r.date, start: '', end: '', break_h: 0,
           normal: r.hours||0, late: 0, early: 0 }).map(csvEscape).join(','));
       }
     }
 
-    // BOM付きUTF-8（Excelで文字化けしないため）
     const bom = '\uFEFF';
     const blob = new Blob([bom + lines.join('\n')], { type: 'text/csv;charset=utf-8;' });
     const a = document.createElement('a');
@@ -2691,7 +2568,6 @@ async function clearAllData() {
   } catch(e) { hideLoading(); showToast('エラー：' + e.message); }
 }
 
-// ════════════ LOADING ════════════
 function showLoading(msg = '処理中...') {
   let el = document.getElementById('loading-overlay');
   if (!el) {
@@ -2718,29 +2594,23 @@ function hideLoading() {
   if (el) el.style.display = 'none';
 }
 
-// ════════════ TOAST ════════════
 function showToast(msg) {
   const t = document.getElementById('toast');
   t.textContent = msg; t.classList.add('show');
   setTimeout(() => t.classList.remove('show'), 2800);
 }
 
-// ════════════ BOOT ════════════
-// 代理ログイン（運営管理画面から開いた場合）
 const _impParams = new URLSearchParams(window.location.search);
 const _impId = _impParams.get('imp_id');
 const _impPw = _impParams.get('imp_pw');
 if (_impId && _impPw) {
-  // 既存セッションを破棄して代理ログインを実行
   localStorage.removeItem('axia_user');
   sessionStorage.removeItem('axia_rt');
   currentUser = null;
   showLoading('代理ログイン中...');
   doLogin(_impId, _impPw).then((success) => {
-    // URLからパラメータを消す（リロード時に再ログインされないように）
     window.history.replaceState({}, '', window.location.pathname);
     if (!success) {
-      // 失敗時はログイン画面を表示
       document.getElementById('auth-screen').style.display = 'flex';
       document.getElementById('app').style.display = 'none';
     }
@@ -2752,38 +2622,30 @@ if (_impId && _impPw) {
     document.getElementById('app').style.display = 'none';
   });
 } else {
-
-// ページリロード時にセッションを復元
-// accessToken はメモリのみ（XSS 対策）、refresh token は sessionStorage に保持
-const savedUser = localStorage.getItem('axia_user');
-if (savedUser) {
-  try {
-    currentUser = JSON.parse(savedUser);
-    // リフレッシュトークンが残っていれば即座にアクセストークンを取得
-    const rt = sessionStorage.getItem('axia_rt');
-    if (rt) {
-      _refreshToken = rt;
-      getValidToken().then(token => {
-        if (token) { enterApp(); }
-        else {
-          // リフレッシュ失敗 → ログイン画面へ
-          localStorage.removeItem('axia_user');
-          currentUser = null;
+  const savedUser = localStorage.getItem('axia_user');
+  if (savedUser) {
+    try {
+      currentUser = JSON.parse(savedUser);
+      const rt = sessionStorage.getItem('axia_rt');
+      if (rt) {
+        _refreshToken = rt;
+        getValidToken().then(token => {
+          if (token) { enterApp(); }
+          else {
+            localStorage.removeItem('axia_user');
+            currentUser = null;
+          }
+        });
+      } else {
+        if (currentUser.token) {
+          _accessToken = currentUser.token;
+          _tokenExpiry = Math.floor(Date.now() / 1000) + 600;
+          enterApp();
         }
-      });
-    } else {
-      // リフレッシュトークンなし → savedUser のトークンで試行
-      if (currentUser.token) {
-        _accessToken = currentUser.token;
-        _tokenExpiry = Math.floor(Date.now() / 1000) + 600; // 仮に10分
-        enterApp();
       }
-    }
-  } catch {}
+    } catch {}
+  }
 }
-
-} // _impId/_impPw のelse終わり
-
 </script>
 </body>
 </html>
