@@ -415,13 +415,9 @@
           <input type="text" id="s-sender" placeholder="例：〇〇警備株式会社" style="width:160px;text-align:right">
         </div>
         
-        <div class="setting-row" style="flex-direction: column; align-items: flex-start; gap: 8px; border-bottom: none; padding-bottom: 0;">
-          <div class="setting-label">会社ロゴ画像</div>
-          <div id="logo-preview-wrap" style="display:none; margin: 4px 0; width: 100%;">
-            <img id="logo-preview-img" style="max-height:48px; max-width:180px; object-fit:contain; border:1px solid var(--border); border-radius:6px; padding:4px; background:#fff;">
-            <button type="button" class="btn btn-danger btn-sm" onclick="removeLogo()" style="padding:4px 8px; font-size:11px; margin-top:6px; display:block; width: auto;">ロゴを削除</button>
-          </div>
-          <input type="file" accept="image/*" onchange="onLogoSelected(this)" style="font-size:12px; border:none; padding:4px 0; cursor: pointer;">
+        <div class="setting-row" id="logo-preview-wrap" style="display:none; flex-direction: column; align-items: flex-start; gap: 6px; border-bottom: none; padding-bottom: 0;">
+          <div class="setting-label">会社ロゴ（運営設定）</div>
+          <img id="logo-preview-img" style="max-height:44px; max-width:160px; object-fit:contain; border:1px solid var(--border); border-radius:6px; padding:4px; background:#fff; margin-top:4px;">
         </div>
 
         <button class="btn btn-ghost btn-sm" onclick="saveSettings()" style="margin-top:12px">設定を保存</button>

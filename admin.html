@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>AXIA Sign — 運営管理画面</title>
+<link rel="icon" href="data:,">
 <style>
   :root {
     --bg: #f5f4f0; --surface: #ffffff; --surface2: #f2f1ee;
@@ -556,7 +557,7 @@
 // ════════════════════════════════════════
 // 設定
 // ════════════════════════════════════════
-const SB_URL     = 'https://unoepkpszkwwctgibavg.supabase.co';
+const SB_URL          = 'https://unoepkpszkwwctgibavg.supabase.co';
 const SB_ANON_KEY     = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVub2Vwa3Bzemt3d2N0Z2liYXZnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkwMDg2NjQsImV4cCI6MjA5NDU4NDY2NH0.JRnrSI3Q4jNpkiC7EOguhcTIq0OSp42SnlcJPLxtd7U';
 const SB_SERVICE_KEY  = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVub2Vwa3Bzemt3d2N0Z2liYXZnIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3OTAwODY2NCwiZXhwIjoyMDk0NTg0NjY0fQ.Ti-oOOJtavcgbaLSJjCYF35CE7kMYDJ8FZQ1B_h81Y8';
 
@@ -637,23 +638,6 @@ async function doAdminLogin() {
   } catch(e) { hideLoading(); showToast('エラー: ' + e.message); }
 }
 
-    // 管理者メールかチェック
-    if (!ADMIN_EMAILS.includes(email)) {
-      hideLoading();
-      showToast('このアカウントに管理者権限がありません');
-      return;
-    }
-
-    adminToken = data.access_token;
-    adminUser = { email, name: '運営管理者' };
-    document.getElementById('auth-overlay').style.display = 'none';
-    document.getElementById('main-layout').style.display = 'flex';
-    document.getElementById('admin-name-display').textContent = email;
-    hideLoading();
-    loadDashboard();
-  } catch(e) { hideLoading(); showToast('エラー: ' + e.message); }
-}
-
 async function doAdminLogout() {
   try {
     await fetch(`${SB_URL}/auth/v1/logout`, {
@@ -670,7 +654,7 @@ async function doAdminLogout() {
 document.getElementById('admin-pass').addEventListener('keydown', e => { if (e.key === 'Enter') doAdminLogin(); });
 
 // ════════════════════════════════════════
-// Supabase fetch（service_role keyなしのため anon keyで全社取得）
+// Supabase fetch
 // ════════════════════════════════════════
 async function sbAll(table, query = '', options = {}) {
   const res = await fetch(`${SB_URL}/rest/v1/${table}${query}`, {
@@ -750,13 +734,11 @@ async function loadDashboard() {
 async function loadCompanies() {
   showLoading('会社情報を読み込み中...');
   try {
-    // Auth Admin APIで全ユーザー取得（伝票0件の新規会社も表示される）
     const [users, records] = await Promise.all([
       fetchAllUsers(),
       sbAll('records', '?select=company_id,created_at,has_sig&order=created_at.desc'),
     ]);
 
-    // records を company_id ごとに集計
     const recMap = {};
     for (const r of records) {
       if (!r.company_id) continue;
@@ -766,7 +748,6 @@ async function loadCompanies() {
       if (r.created_at > recMap[r.company_id].last) recMap[r.company_id].last = r.created_at;
     }
 
-    // ユーザーを会社ごとにまとめる（1会社に複数ユーザーが紐づく想定）
     const companyMap = {};
     for (const u of users) {
       const meta = u.user_metadata || {};
@@ -784,7 +765,6 @@ async function loadCompanies() {
       companyMap[cid].users.push(u);
     }
 
-    // 会社名をSupabaseから取ったのでlocalStorageにも同期保存（ダッシュボード等で使用）
     const names = {};
     Object.values(companyMap).forEach(c => { names[c.company_id] = c.company_name; });
     localStorage.setItem('axia_company_names', JSON.stringify(names));
@@ -880,7 +860,6 @@ async function changePlan(companyId, plan) {
   plans[companyId] = plan;
   localStorage.setItem('axia_plans', JSON.stringify(plans));
 
-  // company_settings テーブルにも反映（プラン上限チェックに使われる）
   try {
     await upsertCompanySettings(companyId, { plan });
   } catch(e) { console.error('plan sync error', e); }
@@ -889,7 +868,6 @@ async function changePlan(companyId, plan) {
   renderCompanies();
 }
 
-// company_settings へのupsert（既存があればPATCH、なければPOST）
 async function upsertCompanySettings(companyId, patch) {
   const existing = await sbAll('company_settings', `?company_id=eq.${companyId}`).catch(()=>[]);
   if (existing && existing.length) {
@@ -989,10 +967,8 @@ function renderCzTemplates(templates) {
       <div class="cz-tpl-checks" style="display:flex;flex-wrap:wrap;gap:6px;"></div>
     </div>`).join('');
 
-  // チェック項目チェックボックスを現在のチェックリストに基づいて生成
   refreshCzTemplateChecks();
 
-  // 保存済みのcheckLabelsを反映
   entries.forEach(([key, t]) => {
     const row = container.querySelector(`.cz-template-row[data-key="${key}"]`);
     if (!row) return;
@@ -1003,7 +979,6 @@ function renderCzTemplates(templates) {
   });
 }
 
-// チェックリスト欄が変更されたら、各テンプレートのチェック項目候補を更新
 function refreshCzTemplateChecks() {
   const labels = document.getElementById('cz-checklist').value.split('\n').map(s=>s.trim()).filter(Boolean);
   document.querySelectorAll('.cz-template-row').forEach(row => {
@@ -1045,17 +1020,15 @@ function removeCzTemplate(btn) {
 async function saveCustomize() {
   if (!czTargetCompanyId) return;
 
-  // チェックリスト項目（最大8件）
   const checklist = document.getElementById('cz-checklist').value
     .split('\n').map(s=>s.trim()).filter(Boolean).slice(0, 8);
 
-  // テンプレート
   const templates = {};
   document.querySelectorAll('.cz-template-row').forEach(row => {
     const key   = row.dataset.key;
     const emoji = row.querySelector('.cz-tpl-emoji').value.trim() || '🔧';
     const label = row.querySelector('.cz-tpl-label').value.trim();
-    if (!label) return; // 名前が空のテンプレートはスキップ
+    if (!label) return;
     const checkLabels = Array.from(row.querySelectorAll('.cz-tpl-checks input:checked')).map(cb => cb.value);
     templates[key] = { label, emoji, checkLabels };
   });
@@ -1102,7 +1075,7 @@ async function executeBan() {
           'Authorization': 'Bearer ' + SB_SERVICE_KEY,
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ ban_duration: '876000h' }) // 約100年=実質永久停止
+        body: JSON.stringify({ ban_duration: '876000h' })
       });
       if (!res.ok) {
         const err = await res.json().catch(()=>({}));
@@ -1217,7 +1190,6 @@ function openAddCompanyModal() {
   openModal('add-company-modal');
 }
 
-// 会社名入力時にIDを自動生成してhiddenフィールドに入れる
 function autoGenLoginId() {
   const name = document.getElementById('m-company-name').value.trim();
   const base = name.replace(/[^a-zA-Z0-9]/g, '').toLowerCase().slice(0, 8);
@@ -1234,7 +1206,7 @@ function genPassword() {
 
 async function addCompany() {
   const name  = document.getElementById('m-company-name').value.trim();
-  autoGenLoginId(); // 常に最新の自動IDを生成
+  autoGenLoginId();
   const rawId = document.getElementById('m-admin-id').value.trim();
   const pass  = document.getElementById('m-admin-pass').value;
   const plan  = document.getElementById('m-plan').value;
@@ -1254,7 +1226,6 @@ async function addCompany() {
     const data = await res.json();
     if (!res.ok) throw new Error(data.error_description || data.msg || '登録失敗');
 
-    // プランと会社名をローカルに保存
     const plans = JSON.parse(localStorage.getItem('axia_plans') || '{}');
     plans[company_id] = plan;
     localStorage.setItem('axia_plans', JSON.stringify(plans));
@@ -1264,7 +1235,6 @@ async function addCompany() {
 
     hideLoading();
 
-    // 成功：認証情報をモーダル内に表示
     const resultEl = document.getElementById('m-result');
     resultEl.innerHTML = `
       ✅ <strong>${name}</strong> を作成しました。<br>
@@ -1274,7 +1244,6 @@ async function addCompany() {
       <strong>会社ID：</strong><code style="font-size:10px;color:#6b6963;">${company_id}</code>
     `;
     resultEl.style.display = '';
-    // ボタンをクローズに切り替え
     document.getElementById('add-company-btn').textContent = '閉じる';
     document.getElementById('add-company-btn').onclick = () => { closeModal('add-company-modal'); loadCompanies(); };
     document.getElementById('add-company-btn').disabled = false;
@@ -1351,7 +1320,6 @@ function renderAllRecords() {
       </td>
     </tr>`).join('') || '<tr><td colspan="10" style="text-align:center;color:var(--text3);padding:20px;">該当なし</td></tr>';
 
-  // ページャー
   const totalPages = Math.ceil(total / REC_PER_PAGE);
   const pager = document.getElementById('rec-pager');
   pager.innerHTML = '';
@@ -1371,7 +1339,6 @@ async function viewRecordPDF(recordId) {
   if (!r) { showToast('伝票が見つかりません'); return; }
   showLoading('PDF生成中...');
   try {
-    // PDF HTMLをA4で生成して新しいタブに表示
     const timeRows = r.time_rows || [];
     const tNormal = timeRows.reduce((s,x) => s+(x.normal||0), 0);
     const tLate   = timeRows.reduce((s,x) => s+(x.late||0),   0);
@@ -1495,7 +1462,6 @@ async function viewRecordPDF(recordId) {
   hideLoading();
 }
 
-// 🟢【修復】欠落していた関数宣言を完全に配置
 function clearRecordFilter() {
   document.getElementById('rec-search').value = '';
   document.getElementById('rec-date-from').value = '';
@@ -1544,7 +1510,6 @@ function openLogoDirect(companyId, companyName) {
   document.getElementById('logo-file').value = '';
   document.getElementById('logo-preview-new').style.display = 'none';
 
-  // 既存ロゴ
   const logos = JSON.parse(localStorage.getItem('axia_logos') || '{}');
   const existing = logos[companyId];
   if (existing) {
@@ -1571,33 +1536,65 @@ function onLogoFileChange(input) {
   reader.readAsDataURL(file);
 }
 
-function saveLogo() {
+async function saveLogo() {
   if (!logoNewDataUrl || !logoTargetCompany) return;
-  const logos = JSON.parse(localStorage.getItem('axia_logos') || '{}');
-  logos[logoTargetCompany] = logoNewDataUrl;
-  localStorage.setItem('axia_logos', JSON.stringify(logos));
-  closeModal('logo-modal');
-  showToast('ロゴを保存しました');
-  loadLogos();
+  showLoading('ロゴをシステムに同期中...');
+  try {
+    const response = await fetch(logoNewDataUrl);
+    const blob = await response.blob();
+    
+    const res = await fetch(`${SB_URL}/storage/v1/object/logos/${logoTargetCompany}/logo`, {
+      method: 'POST',
+      headers: {
+        'apikey': SB_SERVICE_KEY,
+        'Authorization': 'Bearer ' + SB_SERVICE_KEY,
+        'Content-Type': blob.type,
+        'x-upsert': 'true'
+      },
+      body: blob
+    });
+    if (!res.ok) throw new Error('クラウドへのアップロードに失敗しました');
+
+    const logos = JSON.parse(localStorage.getItem('axia_logos') || '{}');
+    logos[logoTargetCompany] = logoNewDataUrl;
+    localStorage.setItem('axia_logos', JSON.stringify(logos));
+    
+    closeModal('logo-modal');
+    showToast('ロゴを完全に同期・保存しました');
+    loadLogos();
+  } catch(e) { showToast('エラー: ' + e.message); }
+  hideLoading();
 }
 
-function deleteLogo() {
-  if (!confirm('このロゴを削除しますか？')) return;
-  const logos = JSON.parse(localStorage.getItem('axia_logos') || '{}');
-  delete logos[logoTargetCompany];
-  localStorage.setItem('axia_logos', JSON.stringify(logos));
-  closeModal('logo-modal');
-  showToast('ロゴを削除しました');
-  loadLogos();
+async function deleteLogo() {
+  if (!confirm('このロゴをシステムから完全に削除しますか？')) return;
+  showLoading('クラウドから削除中...');
+  try {
+    await fetch(`${SB_URL}/storage/v1/object/logos`, {
+      method: 'DELETE',
+      headers: {
+        'apikey': SB_SERVICE_KEY,
+        'Authorization': 'Bearer ' + SB_SERVICE_KEY,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ prefixes: [`${logoTargetCompany}/logo`] })
+    });
+
+    const logos = JSON.parse(localStorage.getItem('axia_logos') || '{}');
+    delete logos[logoTargetCompany];
+    localStorage.setItem('axia_logos', JSON.stringify(logos));
+    
+    closeModal('logo-modal');
+    showToast('ロゴを削除しました');
+    loadLogos();
+  } catch(e) { showToast('エラー: ' + e.message); }
+  hideLoading();
 }
 
 // ── 会社削除
 let deleteTargetCompanyId = null;
 let deleteTargetUserId    = null;
 let deleteTargetName      = null;
-
-// 運営パスワード（doAdminLoginで使用するものと同じ）
-const ADMIN_DELETE_PASSWORD = 'AXIAsign2025!'; // ← 必要に応じて変更
 
 function openDeleteCompany(companyId, name, userId) {
   deleteTargetCompanyId = companyId;
@@ -1625,11 +1622,9 @@ async function executeDeleteCompany() {
   const pw = document.getElementById('delete-admin-pw').value;
   if (!pw) { showToast('パスワードを入力してください'); return; }
 
-  // 管理者パスワードを検証
   const validAdmin = ADMIN_EMAILS.includes(adminUser?.email);
   if (!validAdmin) { showToast('管理者権限がありません'); return; }
 
-  // Supabase認証で再確認
   showLoading('パスワードを確認中...');
   try {
     const authRes = await fetch(`${SB_URL}/auth/v1/token?grant_type=password`, {
@@ -1643,7 +1638,6 @@ async function executeDeleteCompany() {
   showLoading(`「${deleteTargetName}」を削除中...`);
   const errors = [];
 
-  // ① Supabase Authからユーザーを削除
   if (deleteTargetUserId) {
     try {
       const res = await fetch(`${SB_URL}/auth/v1/admin/users/${deleteTargetUserId}`, {
@@ -1654,7 +1648,6 @@ async function executeDeleteCompany() {
     } catch(e) { errors.push('ユーザー削除エラー: ' + e.message); }
   }
 
-  // ② DBから各テーブルのデータを削除
   const tables = ['records', 'sign_queue', 'clients', 'email_logs', 'company_settings'];
   for (const table of tables) {
     try {
@@ -1662,7 +1655,6 @@ async function executeDeleteCompany() {
     } catch(e) { errors.push(`${table}削除失敗`); }
   }
 
-  // ③ localStorageからも削除
   ['axia_company_names','axia_plans','axia_banned','axia_logos'].forEach(key => {
     try {
       const obj = JSON.parse(localStorage.getItem(key) || '{}');
@@ -1686,7 +1678,6 @@ async function executeDeleteCompany() {
 // 利用量管理
 // ════════════════════════════════════════
 async function loadUsage() {
-  // 月セレクトを初期化
   const sel = document.getElementById('usage-month');
   if (!sel.options.length) {
     const now = new Date();
@@ -1712,14 +1703,12 @@ async function loadUsage() {
     const plans = JSON.parse(localStorage.getItem('axia_plans') || '{}');
     const PLAN_LIMITS = { light: 50, standard: 300, premium: 9999 };
 
-    // company_id → user情報のマップ
     const userMap = {};
     users.forEach(u => {
       const cid = u.user_metadata?.company_id;
       if (cid && !userMap[cid]) userMap[cid] = u;
     });
 
-    // 集計
     const recMap = {}, mailMap = {};
     records.forEach(r => {
       if (!recMap[r.company_id]) recMap[r.company_id] = { count: 0, signed: 0 };
@@ -1731,7 +1720,6 @@ async function loadUsage() {
       mailMap[m.company_id]++;
     });
 
-    // 全company_idを合算
     const cids = [...new Set([
       ...Object.keys(userMap),
       ...Object.keys(recMap),
@@ -1861,7 +1849,7 @@ function renderMailLog() {
       (m.slip_no||'').toLowerCase().includes(query) ||
       (m.company_id||'').toLowerCase().includes(query) ||
       (m.to_email||'').toLowerCase().includes(query) ||
-      names[m.company_id].toLowerCase().includes(query);
+      (names[m.company_id] || '').toLowerCase().includes(query);
     const matchStatus = !status || m.status === status;
     return matchText && matchStatus;
   });
@@ -1947,7 +1935,6 @@ async function startImpersonate(companyId, companyName, loginId) {
 
   showLoading('代理ログイン準備中...');
   try {
-    // 一時パスワードを生成してこの会社のアカウントに設定
     const chars = 'abcdefghjkmnpqrstuvwxyzABCDEFGHJKMNPQRSTUVWXYZ23456789';
     let tempPass = 'imp_';
     for (let i = 0; i < 16; i++) tempPass += chars[Math.floor(Math.random() * chars.length)];
@@ -1968,7 +1955,6 @@ async function startImpersonate(companyId, companyName, loginId) {
 
     hideLoading();
 
-    // index.html を代理ログイン用パラメータ付きで新タブで開く
     const url = `index.html?imp_id=${encodeURIComponent(loginId)}&imp_pw=${encodeURIComponent(tempPass)}`;
     const newTab = window.open(url, '_blank');
     if (!newTab || newTab.closed || typeof newTab.closed === 'undefined') {
@@ -1977,7 +1963,6 @@ async function startImpersonate(companyId, companyName, loginId) {
       showToast(`「${companyName}」の画面を別タブで開きました`);
     }
 
-    // 操作ログを記録
     const log = JSON.parse(localStorage.getItem('axia_impersonate_log') || '[]');
     log.unshift({ companyId, companyName, loginId, by: adminUser.email, at: new Date().toISOString() });
     localStorage.setItem('axia_impersonate_log', JSON.stringify(log.slice(0, 50)));
