@@ -612,9 +612,30 @@ async function doAdminLogin() {
 
   showLoading('認証中...');
   try {
-    const url = `index.html?mode=impersonate&admin_token=${encodeURIComponent(adminToken)}&company_id=${encodeURIComponent(companyId)}&company_name=${encodeURIComponent(companyName)}&login_id=${encodeURIComponent(loginId)}`;
+    const res = await fetch(`${SB_URL}/auth/v1/token?grant_type=password`, {
+      method: 'POST',
+      headers: { 'apikey': SB_ANON_KEY, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password: pass })
+    });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error_description || 'ログイン失敗');
+
+    // 管理者メールかチェック
+    if (!ADMIN_EMAILS.includes(email)) {
+      hideLoading();
+      showToast('このアカウントに管理者権限がありません');
+      return;
+    }
+
+    adminToken = data.access_token;
+    adminUser = { email, name: '運営管理者' };
+    document.getElementById('auth-overlay').style.display = 'none';
+    document.getElementById('main-layout').style.display = 'flex';
+    document.getElementById('admin-name-display').textContent = email;
+    hideLoading();
+    loadDashboard();
+  } catch(e) { hideLoading(); showToast('エラー: ' + e.message); }
+}
 
     // 管理者メールかチェック
     if (!ADMIN_EMAILS.includes(email)) {
