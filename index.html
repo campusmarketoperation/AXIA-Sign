@@ -170,6 +170,14 @@
   .search-box input { padding-left: 38px; background: var(--surface); }
   .search-icon { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); }
   .search-icon svg { width: 16px; height: 16px; stroke: var(--text3); stroke-width: 2; }
+  /* サイン画面：横向き時の最適化 */
+  @media (orientation: landscape) and (max-height: 500px) {
+    #sign-step-sign > div:nth-child(2) { padding: 4px 1rem; }
+    #sign-step-sign > div:nth-child(2) p { margin-bottom: 4px; font-size: 12px; }
+    #sign-step-sign > div:nth-child(3) { margin: 0 0.5rem; }
+    #sign-step-sign > div:last-child { padding: 6px 1rem; }
+    #complete-sign-btn { padding: 8px 16px; font-size: 13px; }
+  }
 </style>
 </head>
 <body>
@@ -1775,24 +1783,37 @@ function initFullSignPad() {
   fsCanvas = document.getElementById('fullSignPad');
   fsCtx = fsCanvas.getContext('2d');
 
+  // 座標ズレ修正：DPR対応の正確な位置計算
   function pos(e) {
     const r = fsCanvas.getBoundingClientRect();
+    const dpr = window.devicePixelRatio || 1;
     const src = e.touches ? e.touches[0] : e;
-    return { 
-      x: src.clientX - r.left, 
-      y: src.clientY - r.top 
+    // getBoundingClientRectはCSS座標なのでDPRは不要
+    return {
+      x: (src.clientX - r.left) * (fsCanvas.width / r.width / dpr),
+      y: (src.clientY - r.top)  * (fsCanvas.height / r.height / dpr),
     };
   }
-  fsCanvas.addEventListener('mousedown', e => { fsDrawing = true; const p = pos(e); fsLastX = p.x; fsLastY = p.y; });
+
+  fsCanvas.addEventListener('mousedown', e => {
+    e.preventDefault();
+    fsDrawing = true;
+    const p = pos(e); fsLastX = p.x; fsLastY = p.y;
+  });
   fsCanvas.addEventListener('mousemove', e => {
     if (!fsDrawing) return;
     const p = pos(e);
     fsCtx.beginPath(); fsCtx.moveTo(fsLastX, fsLastY); fsCtx.lineTo(p.x, p.y); fsCtx.stroke();
     fsLastX = p.x; fsLastY = p.y; markFSSigned();
   });
-  fsCanvas.addEventListener('mouseup', () => fsDrawing = false);
+  fsCanvas.addEventListener('mouseup',    () => fsDrawing = false);
   fsCanvas.addEventListener('mouseleave', () => fsDrawing = false);
-  fsCanvas.addEventListener('touchstart', e => { e.preventDefault(); fsDrawing = true; const p = pos(e); fsLastX = p.x; fsLastY = p.y; }, { passive: false });
+
+  fsCanvas.addEventListener('touchstart', e => {
+    e.preventDefault();
+    fsDrawing = true;
+    const p = pos(e); fsLastX = p.x; fsLastY = p.y;
+  }, { passive: false });
   fsCanvas.addEventListener('touchmove', e => {
     e.preventDefault();
     if (!fsDrawing) return;
@@ -1800,22 +1821,37 @@ function initFullSignPad() {
     fsCtx.beginPath(); fsCtx.moveTo(fsLastX, fsLastY); fsCtx.lineTo(p.x, p.y); fsCtx.stroke();
     fsLastX = p.x; fsLastY = p.y; markFSSigned();
   }, { passive: false });
-  fsCanvas.addEventListener('touchend', () => fsDrawing = false);
+  fsCanvas.addEventListener('touchend',   () => fsDrawing = false);
+
+  // 横向き・リサイズ時にキャンバスを再セットアップ
+  const resizeObserver = new ResizeObserver(() => {
+    const hadDraw = fsHasDraw;
+    resizeFullSignPad();
+    // リサイズ後もサインが消えてしまうので警告
+    if (hadDraw) {
+      showToast('画面サイズが変わったためサインがリセットされました');
+    }
+  });
+  resizeObserver.observe(fsCanvas);
 }
 
 function resizeFullSignPad() {
   if (!fsCanvas) return;
-  const dpr = window.devicePixelRatio || 1;
+  const dpr  = window.devicePixelRatio || 1;
   const rect = fsCanvas.getBoundingClientRect();
-  fsCanvas.width = rect.width * dpr;
-  fsCanvas.height = rect.height * dpr;
+  // 物理ピクセルサイズを設定
+  fsCanvas.width  = Math.round(rect.width  * dpr);
+  fsCanvas.height = Math.round(rect.height * dpr);
+  // コンテキストをDPRでスケール（論理座標で描画できるように）
+  fsCtx = fsCanvas.getContext('2d');
   fsCtx.scale(dpr, dpr);
   fsCtx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--text').trim() || '#1a1917';
-  fsCtx.lineWidth = 3;
-  fsCtx.lineCap = 'round';
-  fsCtx.lineJoin = 'round';
+  fsCtx.lineWidth   = 2.5;
+  fsCtx.lineCap     = 'round';
+  fsCtx.lineJoin    = 'round';
   fsHasDraw = false;
-  document.getElementById('fullSignHint').style.opacity = '1';
+  const hint = document.getElementById('fullSignHint');
+  if (hint) hint.style.opacity = '1';
 }
 
 function markFSSigned() {

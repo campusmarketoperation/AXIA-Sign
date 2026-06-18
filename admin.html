@@ -432,6 +432,35 @@
   </div>
 </div>
 
+<!-- 会社削除モーダル -->
+<div class="modal-overlay" id="delete-company-modal">
+  <div class="modal-box">
+    <div class="modal-title" style="color:var(--red-text);">⛔ 会社を完全削除</div>
+    <p id="delete-company-msg" style="font-size:13px;color:var(--text2);margin-bottom:16px;line-height:1.6;"></p>
+    <div style="background:#fef2f2;border-radius:8px;padding:10px 14px;font-size:12px;color:var(--red-text);margin-bottom:16px;line-height:1.7;">
+      ⚠️ この操作は取り消せません。会社の全ユーザー・全伝票データが完全に削除されます。
+    </div>
+    <div class="field" id="delete-step1">
+      <label>確認のため「削除する」と入力してください</label>
+      <input type="text" id="delete-confirm-text" placeholder="削除する" autocomplete="off">
+      <button class="btn btn-danger" style="width:100%;margin-top:10px;" onclick="showDeleteStep2()">次へ →</button>
+    </div>
+    <div id="delete-step2" style="display:none;">
+      <div class="field">
+        <label>運営パスワードを入力してください</label>
+        <input type="password" id="delete-admin-pw" placeholder="管理者パスワード" autocomplete="current-password">
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" onclick="closeModal('delete-company-modal')">キャンセル</button>
+        <button class="btn btn-danger" onclick="executeDeleteCompany()">完全削除する</button>
+      </div>
+    </div>
+    <div id="delete-step-cancel" style="margin-top:8px;">
+      <button class="btn btn-ghost btn-sm" style="width:100%;" onclick="closeModal('delete-company-modal')">キャンセル</button>
+    </div>
+  </div>
+</div>
+
 <!-- カスタマイズモーダル -->
 <div class="modal-overlay" id="customize-modal">
   <div class="modal-box" style="width:620px;max-height:85vh;overflow-y:auto;">
@@ -583,11 +612,7 @@ async function doAdminLogin() {
 
   showLoading('認証中...');
   try {
-    const res = await fetch(`${SB_URL}/auth/v1/token?grant_type=password`, {
-      method: 'POST',
-      headers: { 'apikey': SB_ANON_KEY, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password: pass })
-    });
+    const url = `index.html?mode=impersonate&admin_token=${encodeURIComponent(adminToken)}&company_id=${encodeURIComponent(companyId)}&company_name=${encodeURIComponent(companyName)}&login_id=${encodeURIComponent(loginId)}`;
     const data = await res.json();
     if (!res.ok) throw new Error(data.error_description || 'ログイン失敗');
 
@@ -815,6 +840,7 @@ function renderCompanies() {
             : `<button class="btn btn-xs" style="background:var(--red-bg);color:var(--red-text);border:none;" onclick="confirmBan('${c.company_id}','${esc(c.company_name)}','${c.user_id}')">停止</button>`}
           <button class="btn btn-ghost btn-xs" onclick="openResetPassword('${c.user_id}','${esc(c.company_name)}','${c.login_id}')">PW再発行</button>
           <button class="btn btn-ghost btn-xs" onclick="openCustomize('${c.company_id}','${esc(c.company_name)}')">カスタマイズ</button>
+          <button class="btn btn-xs" style="background:var(--red-bg);color:var(--red-text);border:none;" onclick="openDeleteCompany('${c.company_id}','${esc(c.company_name)}','${c.user_id}')">削除</button>
         </div>
       </td>
     </tr>`;
@@ -1297,7 +1323,10 @@ function renderAllRecords() {
       <td>${r.has_sig ? '<span class="badge badge-green">✓</span>' : '<span class="badge badge-gray">未</span>'}</td>
       <td style="font-size:11px;color:var(--text2);">${r.created_at ? new Date(r.created_at).toLocaleDateString('ja-JP') : '—'}</td>
       <td>
-        ${r.sig_data ? `<button class="btn btn-ghost btn-xs" onclick="viewRecordSig('${r.company_id}', ${r.id})">サイン確認</button>` : '—'}
+        <button class="btn btn-ghost btn-xs" onclick="viewRecordPDF(${r.id})">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="11" height="11"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+          PDF
+        </button>
       </td>
     </tr>`).join('') || '<tr><td colspan="10" style="text-align:center;color:var(--text3);padding:20px;">該当なし</td></tr>';
 
@@ -1316,18 +1345,133 @@ function renderAllRecords() {
   }
 }
 
-function viewRecordSig(companyId, recordId) {
-  const r = allRecords.find(x => x.company_id === companyId && x.id === recordId);
-  if (!r || !r.sig_data) { showToast('サインデータがありません'); return; }
-  const w = window.open('', '_blank', 'width=500,height=400');
-  w.document.write(`
-    <html><head><title>サイン確認 - ${r.slip_no||recordId}</title></head>
-    <body style="margin:0;display:flex;align-items:center;justify-content:center;background:#f5f4f0;height:100vh;font-family:sans-serif;">
-      <div style="background:#fff;border-radius:12px;padding:20px;box-shadow:0 2px 12px rgba(0,0,0,0.1);">
-        <div style="font-size:13px;color:#6b6963;margin-bottom:10px;">${r.project||''} ／ ${r.site||''} ／ ${r.date||''}</div>
-        <img src="${r.sig_data}" style="max-width:400px;border:1px solid #e8e7e3;border-radius:8px;">
+async function viewRecordPDF(recordId) {
+  const r = allRecords.find(x => x.id === recordId);
+  if (!r) { showToast('伝票が見つかりません'); return; }
+  showLoading('PDF生成中...');
+  try {
+    // PDF HTMLをA4で生成して新しいタブに表示
+    const timeRows = r.time_rows || [];
+    const tNormal = timeRows.reduce((s,x) => s+(x.normal||0), 0);
+    const tLate   = timeRows.reduce((s,x) => s+(x.late||0),   0);
+    const tEarly  = timeRows.reduce((s,x) => s+(x.early||0),  0);
+    const tAll    = tNormal + tLate + tEarly || r.hours || 0;
+    const baseP   = r.unit_price || 0;
+    const lateP   = r.unit_price_late  || baseP;
+    const earlyP  = r.unit_price_early || baseP;
+    const amount  = Math.round(baseP*tNormal) + Math.round(lateP*tLate) + Math.round(earlyP*tEarly);
+
+    const timeRowsHTML = timeRows.map(tr => `
+      <tr>
+        <td>${tr.date||r.date||'—'}</td>
+        <td>${tr.name||r.staff||'—'}</td>
+        <td>${tr.start||'—'}</td>
+        <td>${tr.end||'—'}</td>
+        <td>${tr.break_h||0}h</td>
+        <td>${(tr.normal||0).toFixed(1)}h</td>
+        <td>${(tr.late||0).toFixed(1)}h</td>
+        <td>${(tr.early||0).toFixed(1)}h</td>
+      </tr>`).join('');
+
+    const checks = (r.checklist||[]);
+    const checkLabels = ['設備の巡回・点検','清掃作業','一般廃棄物の処理','非業自らの発生ゴミ処理','工事関係車両・音響の管理','廃材回収・運搬作業','交互通行','その他'];
+    const checkedItems = checks.map((v,i) => v ? checkLabels[i] : null).filter(Boolean);
+
+    const _names = JSON.parse(localStorage.getItem('axia_company_names')||'{}');
+    const companyName = _names[r.company_id] || r.company_id || '';
+
+    const w = window.open('', '_blank');
+    w.document.write(`<!DOCTYPE html><html><head>
+      <meta charset="UTF-8">
+      <title>伝票 ${r.slip_no||''}</title>
+      <style>
+        * { box-sizing:border-box; margin:0; padding:0; }
+        body { font-family:-apple-system,'Hiragino Sans',sans-serif; background:#f5f4f0; display:flex; justify-content:center; padding:20px; }
+        .page { background:#fff; width:210mm; padding:16px 22px; box-shadow:0 2px 12px rgba(0,0,0,.1); }
+        .header { background:#1a1917; color:#fff; padding:12px 16px; border-radius:6px; display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; }
+        .header-title { font-size:18px; font-weight:700; }
+        .header-sub { font-size:8px; opacity:.5; letter-spacing:2px; margin-bottom:3px; }
+        .meta { display:flex; justify-content:space-between; font-size:10px; color:#6b6963; margin-bottom:8px; }
+        .info-grid { display:grid; grid-template-columns:1fr 1fr; gap:6px; margin-bottom:10px; }
+        .info-row { display:flex; }
+        .info-label { font-size:10px; color:#6b6963; width:64px; flex-shrink:0; padding:5px 8px; background:#f9f8f6; border-bottom:1px solid #e8e7e3; }
+        .info-val { font-size:12px; font-weight:600; padding:5px 8px; border-bottom:1px solid #e8e7e3; flex:1; }
+        .section-title { font-size:11px; font-weight:600; color:#6b6963; margin-bottom:4px; }
+        table { width:100%; border-collapse:collapse; font-size:10px; margin-bottom:10px; }
+        th { padding:4px 5px; background:#f2f1ee; border:1px solid #e8e7e3; font-weight:500; color:#6b6963; }
+        td { padding:4px 5px; border:1px solid #e8e7e3; text-align:center; }
+        .total-row td { background:#f9f8f6; font-weight:600; }
+        .grand-row td { background:#1a1917; color:#fff; font-weight:700; }
+        .check-grid { display:flex; flex-wrap:wrap; gap:4px; margin-bottom:10px; }
+        .check-item { background:#f2f1ee; border:1px solid #e8e7e3; border-radius:3px; padding:2px 6px; font-size:10px; }
+        .sign-area { display:flex; gap:10px; }
+        .sign-box { flex:1; }
+        .sign-box-inner { border:1px dashed #c8c7c3; border-radius:6px; height:90px; background:#fafafa; display:flex; align-items:center; justify-content:center; overflow:hidden; }
+        .sign-box-inner img { max-width:95%; max-height:85px; object-fit:contain; }
+        .amount-box { border:1px solid #e8e7e3; border-radius:4px; overflow:hidden; min-width:180px; }
+        .amount-header { background:#f2f1ee; padding:4px 8px; font-size:10px; font-weight:600; color:#6b6963; }
+        .amount-row { display:flex; justify-content:space-between; padding:3px 8px; font-size:10px; }
+        .amount-total { background:#1a1917; color:#fff; display:flex; justify-content:space-between; padding:5px 8px; font-weight:700; }
+        .footer { border-top:1px solid #e8e7e3; padding-top:6px; display:flex; justify-content:space-between; font-size:9px; color:#9e9b95; margin-top:8px; }
+        @media print { body { padding:0; background:#fff; } .page { box-shadow:none; } }
+      </style>
+    </head><body><div class="page">
+      <div class="header">
+        <div><div class="header-sub">SERVICE COMPLETION SLIP</div><div class="header-title">作業完了伝票</div></div>
+        <div style="text-align:right;font-size:11px;">
+          ${r.slip_no ? `<div style="font-weight:700;font-size:14px;">${r.slip_no}</div>` : ''}
+          <div style="opacity:.6;font-size:9px;">${r.id||''}</div>
+        </div>
       </div>
-    </body></html>`);
+      <div class="meta">
+        <span>発行：${r.signed_at ? new Date(r.signed_at).toLocaleString('ja-JP') : '—'}</span>
+        <span>${companyName}</span>
+      </div>
+      <div class="info-grid">
+        <div class="info-row"><div class="info-label">案件名</div><div class="info-val">${r.project||'—'}</div></div>
+        <div class="info-row"><div class="info-label">現場名</div><div class="info-val">${r.site||'—'}</div></div>
+        <div class="info-row"><div class="info-label">先方名</div><div class="info-val">${r.staff||'—'}</div></div>
+        <div class="info-row"><div class="info-label">稼働日</div><div class="info-val">${r.date||'—'}</div></div>
+      </div>
+      <div class="section-title">作業時間</div>
+      <table>
+        <thead><tr><th>日付</th><th>名前</th><th>開始</th><th>終了</th><th>休憩</th><th>普通</th><th>深夜</th><th>早朝</th></tr></thead>
+        <tbody>${timeRowsHTML}</tbody>
+        <tfoot>
+          <tr class="total-row"><td colspan="5" style="text-align:right;">合計</td><td>${tNormal.toFixed(1)}h</td><td>${tLate.toFixed(1)}h</td><td>${tEarly.toFixed(1)}h</td></tr>
+          <tr class="grand-row"><td colspan="7" style="text-align:right;">実働合計</td><td>${tAll.toFixed(1)}h</td></tr>
+        </tfoot>
+      </table>
+      ${checkedItems.length ? `<div class="section-title">作業内容</div><div class="check-grid">${checkedItems.map(l=>`<span class="check-item">✓ ${l}</span>`).join('')}</div>` : ''}
+      ${r.note ? `<div style="padding:5px 8px;background:#f9f8f6;border-left:2px solid #c8c7c3;border-radius:3px;font-size:10px;margin-bottom:10px;"><span style="font-size:9px;color:#6b6963;display:block;">備考</span>${r.note}</div>` : ''}
+      <div style="display:flex;gap:8px;align-items:flex-start;margin-bottom:10px;">
+        <div class="sign-area" style="flex:1;">
+          <div class="sign-box">
+            <div class="section-title">お客様ご確認サイン</div>
+            <div class="sign-box-inner">${r.sig_data ? `<img src="${r.sig_data}">` : '<span style="font-size:11px;color:#9e9b95;">サインなし</span>'}</div>
+          </div>
+          <div class="sign-box" style="min-width:120px;">
+            <div class="section-title">会社印・担当者印</div>
+            <div class="sign-box-inner"></div>
+          </div>
+        </div>
+        ${baseP ? `<div class="amount-box">
+          <div class="amount-header">金額明細</div>
+          ${tNormal>0?`<div class="amount-row"><span>普通 ${tNormal.toFixed(1)}h×${baseP.toLocaleString('ja-JP')}円</span><span>${Math.round(baseP*tNormal).toLocaleString('ja-JP')}円</span></div>`:''}
+          ${tLate>0?`<div class="amount-row"><span>深夜 ${tLate.toFixed(1)}h×${lateP.toLocaleString('ja-JP')}円</span><span>${Math.round(lateP*tLate).toLocaleString('ja-JP')}円</span></div>`:''}
+          ${tEarly>0?`<div class="amount-row"><span>早朝 ${tEarly.toFixed(1)}h×${earlyP.toLocaleString('ja-JP')}円</span><span>${Math.round(earlyP*tEarly).toLocaleString('ja-JP')}円</span></div>`:''}
+          <div class="amount-total"><span>合計金額</span><span>${amount.toLocaleString('ja-JP')}円</span></div>
+        </div>` : ''}
+      </div>
+      <div class="footer">
+        <span>${companyName}</span>
+        <span>本書は電子伝票システム(AXIA Sign)により自動発行されました。</span>
+      </div>
+      <div style="text-align:center;margin-top:12px;"><button onclick="window.print()" style="padding:8px 20px;background:#1a1917;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:13px;">印刷する</button></div>
+    </div></body></html>`);
+    w.document.close();
+  } catch(e) { showToast('エラー: ' + e.message); }
+  hideLoading();
 }
 
 // 🟢【修復】欠落していた関数宣言を完全に配置
@@ -1424,6 +1568,97 @@ function deleteLogo() {
   closeModal('logo-modal');
   showToast('ロゴを削除しました');
   loadLogos();
+}
+
+// ── 会社削除
+let deleteTargetCompanyId = null;
+let deleteTargetUserId    = null;
+let deleteTargetName      = null;
+
+// 運営パスワード（doAdminLoginで使用するものと同じ）
+const ADMIN_DELETE_PASSWORD = 'AXIAsign2025!'; // ← 必要に応じて変更
+
+function openDeleteCompany(companyId, name, userId) {
+  deleteTargetCompanyId = companyId;
+  deleteTargetUserId    = userId;
+  deleteTargetName      = name;
+  document.getElementById('delete-company-msg').textContent =
+    `「${name}」のアカウントとすべての伝票データを完全に削除します。`;
+  document.getElementById('delete-confirm-text').value = '';
+  document.getElementById('delete-admin-pw').value = '';
+  document.getElementById('delete-step1').style.display = '';
+  document.getElementById('delete-step2').style.display = 'none';
+  document.getElementById('delete-step-cancel').style.display = '';
+  openModal('delete-company-modal');
+}
+
+function showDeleteStep2() {
+  const txt = document.getElementById('delete-confirm-text').value.trim();
+  if (txt !== '削除する') { showToast('「削除する」と正確に入力してください'); return; }
+  document.getElementById('delete-step1').style.display = 'none';
+  document.getElementById('delete-step2').style.display = '';
+  document.getElementById('delete-step-cancel').style.display = 'none';
+}
+
+async function executeDeleteCompany() {
+  const pw = document.getElementById('delete-admin-pw').value;
+  if (!pw) { showToast('パスワードを入力してください'); return; }
+
+  // 管理者パスワードを検証
+  const validAdmin = ADMIN_EMAILS.includes(adminUser?.email);
+  if (!validAdmin) { showToast('管理者権限がありません'); return; }
+
+  // Supabase認証で再確認
+  showLoading('パスワードを確認中...');
+  try {
+    const authRes = await fetch(`${SB_URL}/auth/v1/token?grant_type=password`, {
+      method: 'POST',
+      headers: { 'apikey': SB_ANON_KEY, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: adminUser.email, password: pw })
+    });
+    if (!authRes.ok) { hideLoading(); showToast('パスワードが正しくありません'); return; }
+  } catch(e) { hideLoading(); showToast('認証エラー: ' + e.message); return; }
+
+  showLoading(`「${deleteTargetName}」を削除中...`);
+  const errors = [];
+
+  // ① Supabase Authからユーザーを削除
+  if (deleteTargetUserId) {
+    try {
+      const res = await fetch(`${SB_URL}/auth/v1/admin/users/${deleteTargetUserId}`, {
+        method: 'DELETE',
+        headers: { 'apikey': SB_SERVICE_KEY, 'Authorization': 'Bearer ' + SB_SERVICE_KEY }
+      });
+      if (!res.ok) errors.push('ユーザー削除失敗');
+    } catch(e) { errors.push('ユーザー削除エラー: ' + e.message); }
+  }
+
+  // ② DBから各テーブルのデータを削除
+  const tables = ['records', 'sign_queue', 'clients', 'email_logs', 'company_settings'];
+  for (const table of tables) {
+    try {
+      await sbAll(table, `?company_id=eq.${deleteTargetCompanyId}`, { method: 'DELETE' });
+    } catch(e) { errors.push(`${table}削除失敗`); }
+  }
+
+  // ③ localStorageからも削除
+  ['axia_company_names','axia_plans','axia_banned','axia_logos'].forEach(key => {
+    try {
+      const obj = JSON.parse(localStorage.getItem(key) || '{}');
+      delete obj[deleteTargetCompanyId];
+      localStorage.setItem(key, JSON.stringify(obj));
+    } catch {}
+  });
+
+  hideLoading();
+  closeModal('delete-company-modal');
+  if (errors.length) {
+    showToast(`削除完了（一部エラー: ${errors.join(', ')}）`);
+  } else {
+    showToast(`「${deleteTargetName}」を削除しました`);
+  }
+  deleteTargetCompanyId = null; deleteTargetUserId = null; deleteTargetName = null;
+  loadCompanies();
 }
 
 // ════════════════════════════════════════
