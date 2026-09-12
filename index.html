@@ -2516,13 +2516,20 @@ async function sendEmail() {
       attachments: [{ filename, content: pdfBase64 }]
     };
 
-    const res = await fetch('https://api.resend.com/emails', {
+    // ✅ Resend APIを直接呼ばず、Supabase Edge Function経由で呼ぶ
+    // （ブラウザ→Resendの直接通信はCORSでブロックされるため、
+    //  サーバーサイド（Edge Function）を経由させることで解決）
+    const res = await fetch(SB_URL + '/functions/v1/send-email', {
       method: 'POST',
-      headers: { 'Authorization': 'Bearer ' + s.resendKey, 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': SB_ANON_KEY,
+        'Authorization': 'Bearer ' + SB_ANON_KEY
+      },
+      body: JSON.stringify({ resendKey: s.resendKey, payload })
     });
     const data = await res.json();
-    if (!res.ok) throw new Error(data.message || '送信失敗');
+    if (!res.ok || data.error) throw new Error(data.error || data.message || '送信失敗');
 
     try {
       await sbFetch('email_logs', 'POST', {
